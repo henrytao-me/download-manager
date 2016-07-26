@@ -22,4 +22,9 @@ package me.henrytao.downloadmanager.config;
 public class Constants {
 
   public static int BUFFER_SIZE = 2048;
+
+  public interface Exception {
+
+    int REQUESTED_RANGE_NOT_SATISFIABLE = 416;
+  }
 }
