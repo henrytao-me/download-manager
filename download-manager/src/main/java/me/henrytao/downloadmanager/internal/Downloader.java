@@ -83,17 +83,16 @@ public class Downloader {
       }
     } catch (IOException ex) {
       exception = ex;
+    } finally {
+      response.close();
+      if (input != null) {
+        input.close();
+      }
+      if (output != null) {
+        output.flush();
+        output.close();
+      }
     }
-
-    if (input != null) {
-      input.close();
-    }
-    if (output != null) {
-      output.flush();
-      output.close();
-    }
-    responseBody.close();
-
     if (exception != null) {
       throw exception;
     }
@@ -107,6 +106,7 @@ public class Downloader {
     Response response = mClient.newCall(request).execute();
     if (!response.isSuccessful()) {
       if (response.code() == Constants.Exception.REQUESTED_RANGE_NOT_SATISFIABLE) {
+        response.close();
         // reset downloader if it's out of range
         bytesRead = 0;
         request = new Request.Builder()
