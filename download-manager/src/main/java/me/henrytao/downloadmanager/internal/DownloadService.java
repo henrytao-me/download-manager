@@ -70,33 +70,40 @@ public class DownloadService extends IntentService {
   }
 
   private void download(String url, String destPath, String destName) throws Exception {
+    // load file
+    File file = new File(Uri.parse(destPath).getPath());
+    if (!file.exists() && !file.mkdirs()) {
+      throw new IllegalStateException("Unable to create directory: " + file.getAbsolutePath());
+    }
+    file = new File(file, destName);
+
+    // read file if exists
+    long bytesRead = 0;
+    if (file.exists()) {
+      bytesRead = file.length();
+    }
+
+    // send request
     Request request = new Request.Builder()
         .url(url)
+        .addHeader("Range", "bytes=" + bytesRead + "-")
         .build();
     Response response = mClient.newCall(request).execute();
     if (!response.isSuccessful()) {
       throw new IOException("Unexpected code " + response);
     }
 
-    mLogger.d("download | %s", response.headers().toString());
-
+    // read response
     ResponseBody responseBody = response.body();
     Exception exception = null;
     InputStream input = null;
     OutputStream output = null;
     try {
-      File file = new File(Uri.parse(destPath).getPath());
-      if (!file.exists() && !file.mkdirs()) {
-        throw new IllegalStateException("Unable to create directory: " + file.getAbsolutePath());
-      }
-      file = new File(file, destName);
-
       input = responseBody.byteStream();
-      output = new FileOutputStream(file);
+      output = new FileOutputStream(file, bytesRead != 0);
 
+      long contentLength = responseBody.contentLength() + bytesRead;
       byte data[] = new byte[Constants.BUFFER_SIZE];
-      long contentLength = responseBody.contentLength();
-      long bytesRead = 0;
       int count;
       while ((count = input.read(data)) != -1) {
         bytesRead += count;
