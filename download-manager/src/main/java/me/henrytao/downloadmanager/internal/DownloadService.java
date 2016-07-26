@@ -18,6 +18,7 @@ package me.henrytao.downloadmanager.internal;
 
 import android.app.IntentService;
 import android.content.Intent;
+import android.net.Uri;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -26,8 +27,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import me.henrytao.downloadmanager.DownloadManager;
+import me.henrytao.downloadmanager.config.Constants;
 import me.henrytao.downloadmanager.utils.Logger;
-import okhttp3.Headers;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -50,26 +51,21 @@ public class DownloadService extends IntentService {
 
   private final Logger mLogger;
 
-  private final ProgressListener mProgressListener;
-
   protected DownloadService(String name) {
     super(name);
     setIntentRedelivery(true);
-    mLogger = Logger.newInstance(Logger.LogLevel.VERBOSE);
-    mLogger.d("onHandleIntent | initialized");
-
-    mProgressListener = (bytesRead, contentLength, done) -> {
-      mLogger.d("Progress: %d%% done\n", (100 * bytesRead) / contentLength);
-    };
+    mLogger = Logger.newInstance(DownloadManager.DEBUG ? Logger.LogLevel.VERBOSE : Logger.LogLevel.NONE);
 
     mClient = new OkHttpClient.Builder()
         .addNetworkInterceptor(chain -> {
           Response response = chain.proceed(chain.request());
           return response.newBuilder()
-              .body(new ProgressResponseBody(response.body(), mProgressListener))
+              .body(new ProgressResponseBody(response.body(), this::onDownloading))
               .build();
         })
         .build();
+
+    mLogger.d("onHandleIntent | initialized");
   }
 
   public DownloadService() {
@@ -79,23 +75,14 @@ public class DownloadService extends IntentService {
   @Override
   protected void onHandleIntent(Intent intent) {
     DownloadManager.Request request = intent.getParcelableExtra(EXTRA_REQUEST);
-    mLogger.d("onHandleIntent | downloading");
-
     try {
-      download(request.getUri().toString(), request.getDestinationUri().getPath(), request.getTitle());
-    } catch (IOException e) {
+      download(request.getUri().toString(), request.getDestinationUri().toString(), request.getTitle());
+    } catch (Exception e) {
       e.printStackTrace();
     }
-
-    try {
-      Thread.sleep(5000);
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    }
-    mLogger.d("onHandleIntent | downloaded");
   }
 
-  private void download(String url, String destPath, String destName) throws IOException {
+  private void download(String url, String destPath, String destName) throws Exception {
     Request request = new Request.Builder()
         .url(url)
         .build();
@@ -104,41 +91,53 @@ public class DownloadService extends IntentService {
       throw new IOException("Unexpected code " + response);
     }
 
-    Headers responseHeaders = response.headers();
-    mLogger.d("download | %s", responseHeaders.toString());
-    mLogger.d("download | %s", response.body().toString());
+    mLogger.d("download | %s", response.headers().toString());
 
-    if (response.isSuccessful()) {
-      InputStream input = null;
-      OutputStream output = null;
+    Exception exception = null;
+    InputStream input = null;
+    OutputStream output = null;
+    try {
+      File file = new File(Uri.parse(destPath).getPath());
+      if (!file.exists() && !file.mkdirs()) {
+        throw new IllegalStateException("Unable to create directory: " + file.getAbsolutePath());
+      }
+      file = new File(file, destName);
 
       input = response.body().byteStream();
-      long length = response.body().contentLength();
-
-      File file = new File(destPath, destName);
-
       output = new FileOutputStream(file);
-      byte data[] = new byte[1024];
 
-      //mLogger.d("progress | %s", "0%");
-      long total = 0;
+      byte data[] = new byte[Constants.BUFFER_SIZE];
+      int total = 0;
       int count;
       while ((count = input.read(data)) != -1) {
         total += count;
-
-        //mLogger.d("progress | %s", String.valueOf(total * 100 / length) + "%");
-
         output.write(data, 0, count);
       }
+
       output.flush();
-      output.close();
-      input.close();
+    } catch (Exception ex) {
+      exception = ex;
+    } finally {
+      if (input != null) {
+        input.close();
+      }
+      if (output != null) {
+        output.close();
+      }
     }
+    if (exception != null) {
+      throw exception;
+    }
+  }
+
+  private void onDownloading(long bytesRead, long contentLength, boolean done) {
+    int percentage = (int) ((100 * bytesRead) / contentLength);
+    mLogger.d("Progress: %d%% done", percentage);
   }
 
   private interface ProgressListener {
 
-    void update(long bytesRead, long contentLength, boolean done);
+    void onDownloading(long bytesRead, long contentLength, boolean done);
   }
 
   private static class ProgressResponseBody extends ResponseBody {
@@ -181,7 +180,7 @@ public class DownloadService extends IntentService {
           long bytesRead = super.read(sink, byteCount);
           // read() returns the number of bytes read, or -1 if this source is exhausted.
           totalBytesRead += bytesRead != -1 ? bytesRead : 0;
-          progressListener.update(totalBytesRead, responseBody.contentLength(), bytesRead == -1);
+          progressListener.onDownloading(totalBytesRead, responseBody.contentLength(), bytesRead == -1);
           return bytesRead;
         }
       };

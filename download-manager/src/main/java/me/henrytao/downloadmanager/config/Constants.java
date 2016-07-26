@@ -14,29 +14,12 @@
  * limitations under the License.
  */
 
-package me.henrytao.downloadmanager.sample;
-
-import android.app.Application;
-import android.content.Context;
-
-import me.henrytao.downloadmanager.DownloadManager;
+package me.henrytao.downloadmanager.config;
 
 /**
- * Created by henrytao on 6/17/16.
+ * Created by henrytao on 7/26/16.
  */
-public class App extends Application {
+public class Constants {
 
-  private static Context sInstance;
-
-  public static Context getInstance() {
-    return sInstance;
-  }
-
-  @Override
-  public void onCreate() {
-    super.onCreate();
-    sInstance = this;
-
-    DownloadManager.DEBUG = true;
-  }
+  public static int BUFFER_SIZE = 2048;
 }
