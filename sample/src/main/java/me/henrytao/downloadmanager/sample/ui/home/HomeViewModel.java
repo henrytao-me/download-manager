@@ -16,6 +16,12 @@
 
 package me.henrytao.downloadmanager.sample.ui.home;
 
+import android.content.Context;
+import android.os.Environment;
+
+import me.henrytao.downloadmanager.DownloadManager;
+import me.henrytao.downloadmanager.DownloadManager.Request;
+import me.henrytao.downloadmanager.sample.App;
 import me.henrytao.downloadmanager.sample.ui.base.BaseViewModel;
 
 /**
@@ -23,12 +29,22 @@ import me.henrytao.downloadmanager.sample.ui.base.BaseViewModel;
  */
 public class HomeViewModel extends BaseViewModel {
 
-  public HomeViewModel() {
+  private final Context mContext;
 
+  public HomeViewModel() {
+    mContext = App.getInstance();
   }
 
   @Override
   public void onCreateView() {
     super.onCreateView();
+  }
+
+  public void onDownloadClicked() {
+    Request request = new Request("http://download.mysquar.com.s3.amazonaws.com/apk/mychat/mychat.apk")
+        .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "/")
+        .setTitle("test.apk")
+        .setDescription("Just for testing");
+    DownloadManager.getInstance(mContext).enqueue(request);
   }
 }

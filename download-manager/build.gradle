@@ -50,6 +50,8 @@ retrolambda {
 dependencies {
   compile fileTree(dir: "libs", include: ["*.jar"])
 
+  compile rootProject.ext.dependencies["com.squareup.okhttp3:okhttp"]
+
   compile rootProject.ext.dependencies["io.reactivex:rxandroid"]
   compile rootProject.ext.dependencies["io.reactivex:rxjava"]
 

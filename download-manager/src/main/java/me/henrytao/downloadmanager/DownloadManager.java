@@ -32,15 +32,15 @@ import rx.Observable;
 /**
  * Created by henrytao on 7/25/16.
  */
-public class Downloader {
+public class DownloadManager {
 
-  private static Downloader sInstance;
+  private static DownloadManager sInstance;
 
-  public static Downloader getInstance(Context context) {
+  public static DownloadManager getInstance(Context context) {
     if (sInstance == null) {
-      synchronized (Downloader.class) {
+      synchronized (DownloadManager.class) {
         if (sInstance == null) {
-          sInstance = new Downloader(context);
+          sInstance = new DownloadManager(context);
         }
       }
     }
@@ -49,7 +49,7 @@ public class Downloader {
 
   private final Context mContext;
 
-  protected Downloader(Context context) {
+  protected DownloadManager(Context context) {
     mContext = context.getApplicationContext();
   }
 
@@ -127,9 +127,30 @@ public class Downloader {
       dest.writeString(this.mTitle);
     }
 
+    public String getDescription() {
+      return mDescription;
+    }
+
     public Request setDescription(String description) {
       mDescription = description;
       return this;
+    }
+
+    public Uri getDestinationUri() {
+      return mDestinationUri;
+    }
+
+    public String getTitle() {
+      return mTitle;
+    }
+
+    public Request setTitle(String title) {
+      mTitle = title;
+      return this;
+    }
+
+    public Uri getUri() {
+      return mUri;
     }
 
     public Request setDestinationInExternalPublicDir(String dirType, String subPath) {
@@ -138,19 +159,16 @@ public class Downloader {
         throw new IllegalStateException("Failed to get external storage public directory");
       } else if (file.exists()) {
         if (!file.isDirectory()) {
-          throw new IllegalStateException(file.getAbsolutePath() + " already exists and is not a directory");
+          throw new IllegalStateException(file.getAbsolutePath() +
+              " already exists and is not a directory");
         }
       } else {
         if (!file.mkdirs()) {
-          throw new IllegalStateException("Unable to create directory: " + file.getAbsolutePath());
+          throw new IllegalStateException("Unable to create directory: " +
+              file.getAbsolutePath());
         }
       }
       setDestinationFromBase(file, subPath);
-      return this;
-    }
-
-    public Request setTitle(String title) {
-      mTitle = title;
       return this;
     }
 

@@ -17,14 +17,22 @@
 package me.henrytao.downloadmanager.sample;
 
 import android.app.Application;
+import android.content.Context;
 
 /**
  * Created by henrytao on 6/17/16.
  */
 public class App extends Application {
 
+  private static Context sInstance;
+
+  public static Context getInstance() {
+    return sInstance;
+  }
+
   @Override
   public void onCreate() {
     super.onCreate();
+    sInstance = this;
   }
 }
