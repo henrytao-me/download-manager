@@ -142,6 +142,11 @@ public class DownloadManager {
       return mDestinationUri;
     }
 
+    public Request setDestinationUri(Uri uri) {
+      mDestinationUri = uri;
+      return this;
+    }
+
     public String getTitle() {
       return mTitle;
     }

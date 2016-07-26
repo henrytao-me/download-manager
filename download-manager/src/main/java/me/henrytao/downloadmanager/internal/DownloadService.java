@@ -29,16 +29,10 @@ import java.io.OutputStream;
 import me.henrytao.downloadmanager.DownloadManager;
 import me.henrytao.downloadmanager.config.Constants;
 import me.henrytao.downloadmanager.utils.Logger;
-import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
-import okio.Buffer;
-import okio.BufferedSource;
-import okio.ForwardingSource;
-import okio.Okio;
-import okio.Source;
 
 /**
  * Created by henrytao on 7/25/16.
@@ -56,14 +50,7 @@ public class DownloadService extends IntentService {
     setIntentRedelivery(true);
     mLogger = Logger.newInstance(DownloadManager.DEBUG ? Logger.LogLevel.VERBOSE : Logger.LogLevel.NONE);
 
-    mClient = new OkHttpClient.Builder()
-        .addNetworkInterceptor(chain -> {
-          Response response = chain.proceed(chain.request());
-          return response.newBuilder()
-              .body(new ProgressResponseBody(response.body(), this::onDownloading))
-              .build();
-        })
-        .build();
+    mClient = new OkHttpClient.Builder().build();
 
     mLogger.d("onHandleIntent | initialized");
   }
@@ -93,6 +80,7 @@ public class DownloadService extends IntentService {
 
     mLogger.d("download | %s", response.headers().toString());
 
+    ResponseBody responseBody = response.body();
     Exception exception = null;
     InputStream input = null;
     OutputStream output = null;
@@ -103,15 +91,17 @@ public class DownloadService extends IntentService {
       }
       file = new File(file, destName);
 
-      input = response.body().byteStream();
+      input = responseBody.byteStream();
       output = new FileOutputStream(file);
 
       byte data[] = new byte[Constants.BUFFER_SIZE];
-      int total = 0;
+      long contentLength = responseBody.contentLength();
+      long bytesRead = 0;
       int count;
       while ((count = input.read(data)) != -1) {
-        total += count;
+        bytesRead += count;
         output.write(data, 0, count);
+        onDownloading(bytesRead, contentLength, bytesRead != contentLength);
       }
 
       output.flush();
@@ -133,57 +123,5 @@ public class DownloadService extends IntentService {
   private void onDownloading(long bytesRead, long contentLength, boolean done) {
     int percentage = (int) ((100 * bytesRead) / contentLength);
     mLogger.d("Progress: %d%% done", percentage);
-  }
-
-  private interface ProgressListener {
-
-    void onDownloading(long bytesRead, long contentLength, boolean done);
-  }
-
-  private static class ProgressResponseBody extends ResponseBody {
-
-    private final ProgressListener progressListener;
-
-    private final ResponseBody responseBody;
-
-    private BufferedSource bufferedSource;
-
-    public ProgressResponseBody(ResponseBody responseBody, ProgressListener progressListener) {
-      this.responseBody = responseBody;
-      this.progressListener = progressListener;
-    }
-
-    @Override
-    public long contentLength() {
-      return responseBody.contentLength();
-    }
-
-    @Override
-    public MediaType contentType() {
-      return responseBody.contentType();
-    }
-
-    @Override
-    public BufferedSource source() {
-      if (bufferedSource == null) {
-        bufferedSource = Okio.buffer(source(responseBody.source()));
-      }
-      return bufferedSource;
-    }
-
-    private Source source(Source source) {
-      return new ForwardingSource(source) {
-        long totalBytesRead = 0L;
-
-        @Override
-        public long read(Buffer sink, long byteCount) throws IOException {
-          long bytesRead = super.read(sink, byteCount);
-          // read() returns the number of bytes read, or -1 if this source is exhausted.
-          totalBytesRead += bytesRead != -1 ? bytesRead : 0;
-          progressListener.onDownloading(totalBytesRead, responseBody.contentLength(), bytesRead == -1);
-          return bytesRead;
-        }
-      };
-    }
   }
 }
