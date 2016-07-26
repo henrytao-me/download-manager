@@ -48,10 +48,15 @@ public class DownloadService extends IntentService {
     long id = intent.getLongExtra(EXTRA_DOWNLOAD_ID, 0);
     DownloadInfo downloadInfo = DownloadDbHelper.create(this).find(id);
     if (downloadInfo != null) {
+      Downloader downloader = Downloader.create(downloadInfo.getUrl(), downloadInfo.getDestPath(), downloadInfo.getDestTitle(),
+          (bytesRead, contentLength) -> onStartDownload(id, bytesRead, contentLength),
+          this::onDownloading);
       try {
-        Downloader.create(downloadInfo.getUrl(), downloadInfo.getDestPath(), downloadInfo.getDestTitle(), this::onDownloading).download();
+        downloader.download();
       } catch (Exception e) {
         e.printStackTrace();
+      } finally {
+        downloader.close();
       }
     }
   }
@@ -59,5 +64,9 @@ public class DownloadService extends IntentService {
   private void onDownloading(long bytesRead, long contentLength, boolean done) {
     int percentage = (int) ((100 * bytesRead) / contentLength);
     mLogger.d("Progress: %d%% done", percentage);
+  }
+
+  private void onStartDownload(long id, long bytesRead, long contentLength) {
+    DownloadDbHelper.create(this).updateContentLength(id, contentLength);
   }
 }

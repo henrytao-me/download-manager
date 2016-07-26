@@ -16,6 +16,7 @@
 
 package me.henrytao.downloadmanager.internal;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -33,6 +34,8 @@ public class DownloadDbHelper extends SQLiteOpenHelper {
   public static final int DATABASE_VERSION = 1;
 
   private static final String C_COMMA = " , ";
+
+  private static final String C_INTEGER = " INTEGER ";
 
   private static final String C_TEXT = " TEXT ";
 
@@ -59,7 +62,13 @@ public class DownloadDbHelper extends SQLiteOpenHelper {
     DownloadInfo downloadInfo = null;
     Cursor cursor = db.query(
         DownloadInfo.TABLE_NAME,
-        new String[]{DownloadInfo.Fields._ID, DownloadInfo.Fields.URL, DownloadInfo.Fields.DEST_PATH, DownloadInfo.Fields.DEST_TITLE},
+        new String[]{
+            DownloadInfo.Fields._ID,
+            DownloadInfo.Fields.URL,
+            DownloadInfo.Fields.DEST_PATH,
+            DownloadInfo.Fields.DEST_TITLE,
+            DownloadInfo.Fields.CONTENT_LENGTH
+        },
         DownloadInfo.Fields._ID + " = ?",
         new String[]{String.valueOf(downloadId)},
         null,
@@ -82,12 +91,26 @@ public class DownloadDbHelper extends SQLiteOpenHelper {
     return id;
   }
 
+  public void updateContentLength(long downloadId, long contentLength) {
+    SQLiteDatabase db = getWritableDatabase();
+    ContentValues values = new ContentValues();
+    values.put(DownloadInfo.Fields.CONTENT_LENGTH, contentLength);
+    db.update(
+        DownloadInfo.TABLE_NAME,
+        values,
+        DownloadInfo.Fields._ID + " = ?",
+        new String[]{String.valueOf(downloadId)}
+    );
+    db.close();
+  }
+
   private void createDownloadInfoTable(SQLiteDatabase db) {
     db.execSQL("CREATE TABLE IF NOT EXISTS " + DownloadInfo.TABLE_NAME + " ( "
-        + DownloadInfo.Fields._ID + " INTEGER PRIMARY KEY AUTOINCREMENT" + C_COMMA
+        + DownloadInfo.Fields._ID + C_INTEGER + "PRIMARY KEY AUTOINCREMENT" + C_COMMA
         + DownloadInfo.Fields.URL + C_TEXT + C_COMMA
         + DownloadInfo.Fields.DEST_PATH + C_TEXT + C_COMMA
-        + DownloadInfo.Fields.DEST_TITLE + C_TEXT
+        + DownloadInfo.Fields.DEST_TITLE + C_TEXT + C_COMMA
+        + DownloadInfo.Fields.CONTENT_LENGTH + C_INTEGER
         + " )");
   }
 }

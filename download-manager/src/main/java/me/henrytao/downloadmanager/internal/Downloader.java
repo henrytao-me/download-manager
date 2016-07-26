@@ -36,26 +36,41 @@ import okhttp3.ResponseBody;
  */
 public class Downloader {
 
-  public static Downloader create(String url, String destPath, String destName, ProgressListener progressListener) {
-    return new Downloader(url, destPath, destName, progressListener);
+  public static Downloader create(String url, String destPath, String destName,
+      OnStartDownloadListener onStartDownloadListener,
+      OnDownloadingListener onDownloadingListener) {
+    return new Downloader(url, destPath, destName,
+        onStartDownloadListener,
+        onDownloadingListener);
   }
-
-  private final OkHttpClient mClient;
 
   private final String mDestName;
 
   private final String mDestPath;
 
-  private final ProgressListener mProgressListener;
-
   private final String mUrl;
 
-  protected Downloader(String url, String destPath, String destName, ProgressListener progressListener) {
+  private OkHttpClient mClient;
+
+  private OnDownloadingListener mOnDownloadingListener;
+
+  private OnStartDownloadListener mOnStartDownloadListener;
+
+  protected Downloader(String url, String destPath, String destName,
+      OnStartDownloadListener onStartDownloadListener,
+      OnDownloadingListener onDownloadingListener) {
     mUrl = url;
     mDestPath = destPath;
     mDestName = destName;
-    mProgressListener = progressListener;
+    mOnStartDownloadListener = onStartDownloadListener;
+    mOnDownloadingListener = onDownloadingListener;
     mClient = new OkHttpClient.Builder().build();
+  }
+
+  public void close() {
+    mClient = null;
+    mOnStartDownloadListener = null;
+    mOnDownloadingListener = null;
   }
 
   public void download() throws IllegalStateException, IOException {
@@ -76,6 +91,11 @@ public class Downloader {
       long contentLength = responseBody.contentLength() + bytesRead;
       byte data[] = new byte[Constants.BUFFER_SIZE];
       int count;
+
+      if (mOnStartDownloadListener != null) {
+        mOnStartDownloadListener.onStartDownload(bytesRead, contentLength);
+      }
+
       while ((count = input.read(data)) != -1) {
         bytesRead += count;
         output.write(data, 0, count);
@@ -129,13 +149,18 @@ public class Downloader {
   }
 
   private void onDownloading(long bytesRead, long contentLength, boolean done) {
-    if (mProgressListener != null) {
-      mProgressListener.onDownloading(bytesRead, contentLength, done);
+    if (mOnDownloadingListener != null) {
+      mOnDownloadingListener.onDownloading(bytesRead, contentLength, done);
     }
   }
 
-  public interface ProgressListener {
+  public interface OnDownloadingListener {
 
     void onDownloading(long bytesRead, long contentLength, boolean done);
+  }
+
+  public interface OnStartDownloadListener {
+
+    void onStartDownload(long bytesRead, long contentLength);
   }
 }

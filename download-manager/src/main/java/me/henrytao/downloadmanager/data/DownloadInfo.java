@@ -32,7 +32,7 @@ public class DownloadInfo {
     if (request == null) {
       return null;
     }
-    return new DownloadInfo(0, request.getUri().toString(), request.getDestinationUri().toString(), request.getTitle());
+    return new DownloadInfo(0, request.getUri().toString(), request.getDestinationUri().toString(), request.getTitle(), 0);
   }
 
   public static DownloadInfo create(Cursor cursor) {
@@ -46,8 +46,11 @@ public class DownloadInfo {
         cursor.getLong(cursor.getColumnIndex(Fields._ID)),
         cursor.getString(cursor.getColumnIndex(Fields.URL)),
         cursor.getString(cursor.getColumnIndex(Fields.DEST_PATH)),
-        cursor.getString(cursor.getColumnIndex(Fields.DEST_TITLE)));
+        cursor.getString(cursor.getColumnIndex(Fields.DEST_TITLE)),
+        cursor.getLong(cursor.getColumnIndex(Fields.CONTENT_LENGTH)));
   }
+
+  private long mContentLength;
 
   private String mDestPath;
 
@@ -57,11 +60,12 @@ public class DownloadInfo {
 
   private String mUrl;
 
-  protected DownloadInfo(long id, String url, String destPath, String destTitle) {
+  protected DownloadInfo(long id, String url, String destPath, String destTitle, long contentLength) {
     mId = id;
     mUrl = url;
     mDestPath = destPath;
     mDestTitle = destTitle;
+    mContentLength = contentLength;
   }
 
   public String getDestPath() {
@@ -88,11 +92,13 @@ public class DownloadInfo {
     values.put(Fields.URL, mUrl);
     values.put(Fields.DEST_PATH, mDestPath);
     values.put(Fields.DEST_TITLE, mDestTitle);
+    values.put(Fields.CONTENT_LENGTH, mContentLength);
     return values;
   }
 
   public interface Fields {
 
+    String CONTENT_LENGTH = "content_length";
     String DEST_PATH = "dest_path";
     String DEST_TITLE = "dest_title";
     String URL = "url";
