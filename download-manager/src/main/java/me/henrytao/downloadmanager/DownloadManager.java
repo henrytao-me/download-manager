@@ -20,12 +20,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Environment;
-import android.os.Parcel;
-import android.os.Parcelable;
 
 import java.io.File;
 
 import me.henrytao.downloadmanager.data.DownloadInfo;
+import me.henrytao.downloadmanager.internal.DownloadDbHelper;
 import me.henrytao.downloadmanager.internal.DownloadService;
 import rx.Observable;
 
@@ -56,14 +55,17 @@ public class DownloadManager {
   }
 
   public long enqueue(Request request) {
-    Intent intent = new Intent(mContext, DownloadService.class);
-    intent.putExtra(DownloadService.EXTRA_REQUEST, request);
-    mContext.startService(intent);
-    return 0;
+    request.validate();
+    DownloadInfo downloadInfo = DownloadInfo.create(request);
+    long id = DownloadDbHelper.create(mContext).insert(downloadInfo);
+    enqueue(id);
+    return id;
   }
 
-  public long findId(Request request) {
-    return 0;
+  public void enqueue(long id) {
+    Intent intent = new Intent(mContext, DownloadService.class);
+    intent.putExtra(DownloadService.EXTRA_DOWNLOAD_ID, id);
+    mContext.startService(intent);
   }
 
   public Observable<DownloadInfo> observe(long id) {
@@ -72,23 +74,9 @@ public class DownloadManager {
     });
   }
 
-  public static class Request implements Parcelable {
-
-    public static final Creator<Request> CREATOR = new Creator<Request>() {
-      @Override
-      public Request createFromParcel(Parcel source) {
-        return new Request(source);
-      }
-
-      @Override
-      public Request[] newArray(int size) {
-        return new Request[size];
-      }
-    };
+  public static class Request {
 
     private final Uri mUri;
-
-    private String mDescription;
 
     private Uri mDestinationUri;
 
@@ -109,35 +97,6 @@ public class DownloadManager {
       this(Uri.parse(uri));
     }
 
-    protected Request(Parcel in) {
-      this.mUri = in.readParcelable(Uri.class.getClassLoader());
-      this.mDescription = in.readString();
-      this.mDestinationUri = in.readParcelable(Uri.class.getClassLoader());
-      this.mTitle = in.readString();
-    }
-
-    @Override
-    public int describeContents() {
-      return 0;
-    }
-
-    @Override
-    public void writeToParcel(Parcel dest, int flags) {
-      dest.writeParcelable(this.mUri, flags);
-      dest.writeString(this.mDescription);
-      dest.writeParcelable(this.mDestinationUri, flags);
-      dest.writeString(this.mTitle);
-    }
-
-    public String getDescription() {
-      return mDescription;
-    }
-
-    public Request setDescription(String description) {
-      mDescription = description;
-      return this;
-    }
-
     public Uri getDestinationUri() {
       return mDestinationUri;
     }
@@ -148,7 +107,7 @@ public class DownloadManager {
     }
 
     public String getTitle() {
-      return mTitle;
+      return mTitle == null || mTitle.length() == 0 ? mUri.getLastPathSegment() : mTitle;
     }
 
     public Request setTitle(String title) {
@@ -175,6 +134,18 @@ public class DownloadManager {
       }
       setDestinationFromBase(file, subPath);
       return this;
+    }
+
+    public void validate() throws IllegalArgumentException {
+      if (getUri() == null) {
+        throw new IllegalArgumentException("Uri can not be null");
+      }
+      if (getDestinationUri() == null) {
+        throw new IllegalArgumentException("DestinationUri can not be null");
+      }
+      if (getTitle() == null || getTitle().length() == 0) {
+        throw new IllegalArgumentException("Title can not be null");
+      }
     }
 
     private void setDestinationFromBase(File base, String subPath) {

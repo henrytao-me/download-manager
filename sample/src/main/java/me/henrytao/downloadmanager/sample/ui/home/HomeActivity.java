@@ -18,7 +18,6 @@ package me.henrytao.downloadmanager.sample.ui.home;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.databinding.DataBindingUtil;
 import android.os.Bundle;
@@ -74,11 +73,8 @@ public class HomeActivity extends BaseActivity {
       new AlertDialog.Builder(this)
           .setTitle("Inform and request")
           .setMessage("You need to enable permissions, bla bla bla")
-          .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-              ActivityCompat.requestPermissions(HomeActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 300);
-            }
+          .setPositiveButton("OK", (dialog, which) -> {
+            ActivityCompat.requestPermissions(HomeActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 300);
           })
           .show();
     } else {

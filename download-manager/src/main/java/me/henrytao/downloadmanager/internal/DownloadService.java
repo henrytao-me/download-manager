@@ -20,6 +20,7 @@ import android.app.IntentService;
 import android.content.Intent;
 
 import me.henrytao.downloadmanager.DownloadManager;
+import me.henrytao.downloadmanager.data.DownloadInfo;
 import me.henrytao.downloadmanager.utils.Logger;
 
 /**
@@ -27,7 +28,7 @@ import me.henrytao.downloadmanager.utils.Logger;
  */
 public class DownloadService extends IntentService {
 
-  public static final String EXTRA_REQUEST = "EXTRA_REQUEST";
+  public static final String EXTRA_DOWNLOAD_ID = "EXTRA_DOWNLOAD_ID";
 
   private final Logger mLogger;
 
@@ -44,13 +45,14 @@ public class DownloadService extends IntentService {
 
   @Override
   protected void onHandleIntent(Intent intent) {
-    DownloadManager.Request request = intent.getParcelableExtra(EXTRA_REQUEST);
-    try {
-      Downloader
-          .create(request.getUri().toString(), request.getDestinationUri().toString(), request.getTitle(), this::onDownloading)
-          .download();
-    } catch (Exception e) {
-      e.printStackTrace();
+    long id = intent.getLongExtra(EXTRA_DOWNLOAD_ID, 0);
+    DownloadInfo downloadInfo = DownloadDbHelper.create(this).find(id);
+    if (downloadInfo != null) {
+      try {
+        Downloader.create(downloadInfo.getUrl(), downloadInfo.getDestPath(), downloadInfo.getDestTitle(), this::onDownloading).download();
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
     }
   }
 

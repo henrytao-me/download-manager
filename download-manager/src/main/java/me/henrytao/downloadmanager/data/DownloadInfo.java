@@ -16,9 +16,86 @@
 
 package me.henrytao.downloadmanager.data;
 
+import android.content.ContentValues;
+import android.database.Cursor;
+
+import me.henrytao.downloadmanager.DownloadManager;
+
 /**
  * Created by henrytao on 7/25/16.
  */
 public class DownloadInfo {
 
+  public static final String TABLE_NAME = "download_info";
+
+  public static DownloadInfo create(DownloadManager.Request request) {
+    if (request == null) {
+      return null;
+    }
+    return new DownloadInfo(0, request.getUri().toString(), request.getDestinationUri().toString(), request.getTitle());
+  }
+
+  public static DownloadInfo create(Cursor cursor) {
+    if (cursor == null || cursor.isClosed()) {
+      return null;
+    }
+    if (cursor.isBeforeFirst() && !cursor.moveToFirst()) {
+      return null;
+    }
+    return new DownloadInfo(
+        cursor.getLong(cursor.getColumnIndex(Fields._ID)),
+        cursor.getString(cursor.getColumnIndex(Fields.URL)),
+        cursor.getString(cursor.getColumnIndex(Fields.DEST_PATH)),
+        cursor.getString(cursor.getColumnIndex(Fields.DEST_TITLE)));
+  }
+
+  private String mDestPath;
+
+  private String mDestTitle;
+
+  private long mId;
+
+  private String mUrl;
+
+  protected DownloadInfo(long id, String url, String destPath, String destTitle) {
+    mId = id;
+    mUrl = url;
+    mDestPath = destPath;
+    mDestTitle = destTitle;
+  }
+
+  public String getDestPath() {
+    return mDestPath;
+  }
+
+  public String getDestTitle() {
+    return mDestTitle;
+  }
+
+  public long getId() {
+    return mId;
+  }
+
+  public String getUrl() {
+    return mUrl;
+  }
+
+  public ContentValues toContentValues() {
+    ContentValues values = new ContentValues();
+    if (mId > 0) {
+      values.put(Fields._ID, mId);
+    }
+    values.put(Fields.URL, mUrl);
+    values.put(Fields.DEST_PATH, mDestPath);
+    values.put(Fields.DEST_TITLE, mDestTitle);
+    return values;
+  }
+
+  public interface Fields {
+
+    String DEST_PATH = "dest_path";
+    String DEST_TITLE = "dest_title";
+    String URL = "url";
+    String _ID = "_id";
+  }
 }

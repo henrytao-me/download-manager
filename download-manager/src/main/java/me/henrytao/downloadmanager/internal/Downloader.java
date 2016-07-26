@@ -81,18 +81,19 @@ public class Downloader {
         output.write(data, 0, count);
         onDownloading(bytesRead, contentLength, bytesRead != contentLength);
       }
-
-      output.flush();
     } catch (IOException ex) {
       exception = ex;
-    } finally {
-      if (input != null) {
-        input.close();
-      }
-      if (output != null) {
-        output.close();
-      }
     }
+
+    if (input != null) {
+      input.close();
+    }
+    if (output != null) {
+      output.flush();
+      output.close();
+    }
+    responseBody.close();
+
     if (exception != null) {
       throw exception;
     }

@@ -31,6 +31,10 @@ public class HomeViewModel extends BaseViewModel {
 
   private final Context mContext;
 
+  private long mDownloadId;
+
+  private DownloadManager mDownloadManager;
+
   public HomeViewModel() {
     mContext = App.getInstance();
   }
@@ -38,13 +42,17 @@ public class HomeViewModel extends BaseViewModel {
   @Override
   public void onCreateView() {
     super.onCreateView();
+    mDownloadManager = DownloadManager.getInstance(mContext);
   }
 
   public void onDownloadClicked() {
-    Request request = new Request("http://download.mysquar.com.s3.amazonaws.com/apk/mychat/mychat.apk")
-        .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "/")
-        .setTitle("test.apk")
-        .setDescription("Just for testing");
-    DownloadManager.getInstance(mContext).enqueue(request);
+    if (mDownloadId == 0) {
+      Request request = new Request("http://download.mysquar.com.s3.amazonaws.com/apk/mychat/mychat.apk")
+          .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "/")
+          .setTitle("test.apk");
+      mDownloadId = mDownloadManager.enqueue(request);
+    } else {
+      mDownloadManager.enqueue(mDownloadId);
+    }
   }
 }
