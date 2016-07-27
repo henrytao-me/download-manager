@@ -18,8 +18,6 @@ package me.henrytao.downloadmanager;
 
 import org.junit.Test;
 
-import android.net.Uri;
-
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
@@ -33,8 +31,7 @@ public class ExampleUnitTest {
 
   @Test
   public void test() {
-    Uri uri = Uri.parse("http://download.mysquar.com.s3.amazonaws.com/apk/mychat/mychat.apk?hello=moto");
-    log("%s", uri.getLastPathSegment());
+
   }
 
   @Test

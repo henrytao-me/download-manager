@@ -55,12 +55,24 @@ public class DownloadBus {
     get(id).onNext(new Info(Info.State.QUEUEING, 0, 0));
   }
 
+  public void error(long id, Throwable throwable) {
+    get(id).onNext(new Info(Info.State.ERROR, throwable));
+  }
+
   public void invalid(long id) {
     get(id).onNext(new Info(Info.State.INVALID, 0, 0));
   }
 
   public Observable<Info> observe(long id) {
-    return get(id);
+    return Observable.just((Info) null)
+        .mergeWith(get(id))
+        .filter(info -> info != null)
+        .flatMap(info -> {
+          if (info.state == Info.State.ERROR) {
+            return Observable.error(info.getThrowable());
+          }
+          return Observable.just(info);
+        });
   }
 
   public void pause(long id) {

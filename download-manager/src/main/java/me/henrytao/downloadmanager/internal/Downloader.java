@@ -138,6 +138,10 @@ public class Downloader {
     mIsInterrupted = true;
   }
 
+  public boolean isInterrupted() {
+    return mIsInterrupted;
+  }
+
   private Pair<Long, Response> execute(long bytesRead) throws IOException {
     Request request = new Request.Builder()
         .url(mUrl)

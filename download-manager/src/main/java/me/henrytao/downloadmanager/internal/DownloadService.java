@@ -22,8 +22,10 @@ import android.content.Intent;
 import java.io.File;
 
 import me.henrytao.downloadmanager.DownloadManager;
+import me.henrytao.downloadmanager.Info;
 import me.henrytao.downloadmanager.utils.FileUtils;
 import me.henrytao.downloadmanager.utils.Logger;
+import rx.Subscription;
 
 /**
  * Created by henrytao on 7/25/16.
@@ -38,9 +40,10 @@ public class DownloadService extends IntentService {
 
   private Downloader mDownloader;
 
+  private Subscription mSubscription;
+
   protected DownloadService(String name) {
     super(name);
-    setIntentRedelivery(true);
     mDownloadBus = DownloadBus.getInstance();
     mLogger = Logger.newInstance(DownloadManager.DEBUG ? Logger.LogLevel.NONE : Logger.LogLevel.NONE);
     mLogger.d("onHandleIntent | initialized");
@@ -52,15 +55,20 @@ public class DownloadService extends IntentService {
 
   @Override
   protected void onHandleIntent(Intent intent) {
-    mDownloader = null;
+    reset();
     final long id = intent.getLongExtra(EXTRA_DOWNLOAD_ID, 0);
     DownloadInfo downloadInfo = DownloadDbHelper.create(this).find(id);
     if (downloadInfo != null) {
       File destFile = FileUtils.getFile(downloadInfo.getDestPath(), downloadInfo.getDestTitle());
       long destContentLength = destFile.length();
       if (destFile.exists() && downloadInfo.getContentLength() == destContentLength) {
+        FileUtils.delete(FileUtils.getFile(downloadInfo.getTempPath(), downloadInfo.getTempTitle()));
         onDownloaded(id, destContentLength);
       } else {
+        mSubscription = mDownloadBus
+            .observe(id)
+            .filter(info -> info.state == Info.State.PAUSED)
+            .subscribe(info -> onPaused(id), throwable -> onError(id, throwable));
         mDownloader = Downloader.create(downloadInfo.getUrl(),
             downloadInfo.getDestPath(), downloadInfo.getDestTitle(),
             downloadInfo.getTempPath(), downloadInfo.getTempTitle(),
@@ -70,10 +78,10 @@ public class DownloadService extends IntentService {
         );
         try {
           mDownloader.download();
-        } catch (Exception e) {
-          e.printStackTrace();
+        } catch (Exception exception) {
+          onError(id, exception);
         } finally {
-          mDownloader.close();
+          reset();
         }
       }
     } else {
@@ -81,20 +89,54 @@ public class DownloadService extends IntentService {
     }
   }
 
+  private boolean isPaused() {
+    return mDownloader != null && mDownloader.isInterrupted();
+  }
+
   private void onDownloaded(long id, long contentLength) {
+    if (isPaused()) {
+      return;
+    }
     mLogger.d("onDownloaded");
     mDownloadBus.downloaded(id, contentLength);
   }
 
   private void onDownloading(long id, long bytesRead, long contentLength, boolean done) {
+    if (isPaused()) {
+      return;
+    }
     int percentage = (int) ((100 * bytesRead) / contentLength);
     mLogger.d("onDownloading: %d%%", percentage);
     mDownloadBus.downloading(id, bytesRead, contentLength);
   }
 
+  private void onError(long id, Throwable throwable) {
+    mDownloadBus.error(id, throwable);
+  }
+
+  private void onPaused(long id) {
+    if (mDownloader != null) {
+      mDownloader.interrupt();
+    }
+  }
+
   private void onStartDownload(long id, long bytesRead, long contentLength) {
+    if (isPaused()) {
+      return;
+    }
     DownloadDbHelper.create(this).updateContentLength(id, contentLength);
     mLogger.d("onStartDownload: %d of %d", bytesRead, contentLength);
     mDownloadBus.started(id, bytesRead, contentLength);
+  }
+
+  private void reset() {
+    if (mSubscription != null && !mSubscription.isUnsubscribed()) {
+      mSubscription.unsubscribe();
+    }
+    mSubscription = null;
+    if (mDownloader != null) {
+      mDownloader.close();
+    }
+    mDownloader = null;
   }
 }

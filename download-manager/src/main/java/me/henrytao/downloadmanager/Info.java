@@ -27,10 +27,17 @@ public class Info {
 
   public final State state;
 
+  private Throwable mThrowable;
+
   public Info(State state, long bytesRead, long contentLength) {
     this.state = state;
     this.bytesRead = bytesRead;
     this.contentLength = contentLength;
+  }
+
+  public Info(State state, Throwable throwable) {
+    this(state, 0, 0);
+    mThrowable = throwable;
   }
 
   @Override
@@ -59,6 +66,10 @@ public class Info {
     return result;
   }
 
+  public Throwable getThrowable() {
+    return mThrowable;
+  }
+
   public enum State {
     QUEUEING,
     STARTED,
@@ -66,6 +77,7 @@ public class Info {
     PAUSED,
     RESUMED,
     DOWNLOADED,
-    INVALID
+    INVALID,
+    ERROR
   }
 }

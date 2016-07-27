@@ -24,10 +24,10 @@ import java.util.concurrent.TimeUnit;
 
 import me.henrytao.downloadmanager.DownloadManager;
 import me.henrytao.downloadmanager.DownloadManager.Request;
-import me.henrytao.downloadmanager.Info;
 import me.henrytao.downloadmanager.sample.App;
 import me.henrytao.downloadmanager.sample.ui.base.BaseViewModel;
 import me.henrytao.downloadmanager.utils.Logger;
+import me.henrytao.downloadmanager.utils.rx.RxUtils;
 import me.henrytao.downloadmanager.utils.rx.Transformer;
 import me.henrytao.mvvmlifecycle.rx.UnsubscribeLifeCycle;
 
@@ -75,16 +75,14 @@ public class HomeViewModel extends BaseViewModel {
 
   private void showProgress(long downloadId) {
     manageSubscription(mDownloadManager.observe(downloadId)
+        .distinctUntilChanged()
+        .buffer(300, TimeUnit.MILLISECONDS)
+        .compose(RxUtils.distinctUntilChanged())
+        .flatMapIterable(infos -> infos)
         .compose(Transformer.applyComputationScheduler())
-        //.map(info -> {
-        //  double percentage = info.contentLength > 0 ? info.bytesRead / info.contentLength : 0;
-        //  return new Info(info.state, ((int) (percentage * 10000) * info.contentLength) / 10000, info.contentLength);
-        //})
-        //.distinctUntilChanged()
-        .buffer(1000, TimeUnit.MILLISECONDS)
-        .map(infos -> infos.get(infos.size() - 1))
         .subscribe(info -> {
-          mLogger.d("Progress %s | %s | %d | %d", downloadId, info.state, info.bytesRead, info.contentLength);
-        }), UnsubscribeLifeCycle.DESTROY_VIEW);
+          int percentage = info.contentLength > 0 ? (int) ((100 * info.bytesRead) / info.contentLength) : 0;
+          mLogger.d("Progress %s | %s | %d%%", downloadId, info.state, percentage);
+        }, Throwable::printStackTrace), UnsubscribeLifeCycle.DESTROY_VIEW);
   }
 }
