@@ -20,7 +20,6 @@ import android.app.IntentService;
 import android.content.Intent;
 
 import me.henrytao.downloadmanager.DownloadManager;
-import me.henrytao.downloadmanager.data.DownloadInfo;
 import me.henrytao.downloadmanager.utils.Logger;
 
 /**
@@ -48,9 +47,13 @@ public class DownloadService extends IntentService {
     long id = intent.getLongExtra(EXTRA_DOWNLOAD_ID, 0);
     DownloadInfo downloadInfo = DownloadDbHelper.create(this).find(id);
     if (downloadInfo != null) {
-      Downloader downloader = Downloader.create(downloadInfo.getUrl(), downloadInfo.getDestPath(), downloadInfo.getDestTitle(),
+      Downloader downloader = Downloader.create(downloadInfo.getUrl(),
+          downloadInfo.getDestPath(), downloadInfo.getDestTitle(),
+          downloadInfo.getTempPath(), downloadInfo.getTempTitle(),
           (bytesRead, contentLength) -> onStartDownload(id, bytesRead, contentLength),
-          this::onDownloading);
+          this::onDownloading,
+          this::onDownloaded
+      );
       try {
         downloader.download();
       } catch (Exception e) {
@@ -58,7 +61,13 @@ public class DownloadService extends IntentService {
       } finally {
         downloader.close();
       }
+    } else {
+      // TODO
     }
+  }
+
+  private void onDownloaded() {
+
   }
 
   private void onDownloading(long bytesRead, long contentLength, boolean done) {

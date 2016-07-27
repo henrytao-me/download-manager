@@ -54,5 +54,10 @@ public class HomeViewModel extends BaseViewModel {
     } else {
       mDownloadManager.enqueue(mDownloadId);
     }
+    showProgress(mDownloadId);
+  }
+
+  private void showProgress(long downloadId) {
+    //manageSubscription();
   }
 }

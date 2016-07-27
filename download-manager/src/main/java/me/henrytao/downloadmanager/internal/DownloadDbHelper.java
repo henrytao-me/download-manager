@@ -22,8 +22,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
-import me.henrytao.downloadmanager.data.DownloadInfo;
-
 /**
  * Created by henrytao on 7/26/16.
  */
@@ -67,7 +65,9 @@ public class DownloadDbHelper extends SQLiteOpenHelper {
             DownloadInfo.Fields.URL,
             DownloadInfo.Fields.DEST_PATH,
             DownloadInfo.Fields.DEST_TITLE,
-            DownloadInfo.Fields.CONTENT_LENGTH
+            DownloadInfo.Fields.CONTENT_LENGTH,
+            DownloadInfo.Fields.TEMP_PATH,
+            DownloadInfo.Fields.TEMP_TITLE
         },
         DownloadInfo.Fields._ID + " = ?",
         new String[]{String.valueOf(downloadId)},
@@ -110,7 +110,9 @@ public class DownloadDbHelper extends SQLiteOpenHelper {
         + DownloadInfo.Fields.URL + C_TEXT + C_COMMA
         + DownloadInfo.Fields.DEST_PATH + C_TEXT + C_COMMA
         + DownloadInfo.Fields.DEST_TITLE + C_TEXT + C_COMMA
-        + DownloadInfo.Fields.CONTENT_LENGTH + C_INTEGER
+        + DownloadInfo.Fields.CONTENT_LENGTH + C_INTEGER + C_COMMA
+        + DownloadInfo.Fields.TEMP_PATH + C_TEXT + C_COMMA
+        + DownloadInfo.Fields.TEMP_TITLE + C_TEXT
         + " )");
   }
 }

@@ -22,9 +22,10 @@ import android.net.Uri;
 import android.os.Environment;
 
 import java.io.File;
+import java.util.UUID;
 
-import me.henrytao.downloadmanager.data.DownloadInfo;
 import me.henrytao.downloadmanager.internal.DownloadDbHelper;
+import me.henrytao.downloadmanager.internal.DownloadInfo;
 import me.henrytao.downloadmanager.internal.DownloadService;
 import rx.Observable;
 
@@ -37,6 +38,8 @@ public class DownloadManager {
 
   private static DownloadManager sInstance;
 
+  private static Uri sTempPath;
+
   public static DownloadManager getInstance(Context context) {
     if (sInstance == null) {
       synchronized (DownloadManager.class) {
@@ -48,6 +51,10 @@ public class DownloadManager {
     return sInstance;
   }
 
+  private static Uri getTempPath(Context context) {
+    return sTempPath != null ? sTempPath : Uri.fromFile(context.getCacheDir());
+  }
+
   private final Context mContext;
 
   protected DownloadManager(Context context) {
@@ -56,7 +63,7 @@ public class DownloadManager {
 
   public long enqueue(Request request) {
     request.validate();
-    DownloadInfo downloadInfo = DownloadInfo.create(request);
+    DownloadInfo downloadInfo = DownloadInfo.create(request, getTempPath(mContext), UUID.randomUUID().toString());
     long id = DownloadDbHelper.create(mContext).insert(downloadInfo);
     enqueue(id);
     return id;

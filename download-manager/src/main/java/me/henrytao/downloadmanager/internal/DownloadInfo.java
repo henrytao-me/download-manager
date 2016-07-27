@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package me.henrytao.downloadmanager.data;
+package me.henrytao.downloadmanager.internal;
 
 import android.content.ContentValues;
 import android.database.Cursor;
+import android.net.Uri;
 
 import me.henrytao.downloadmanager.DownloadManager;
 
@@ -28,11 +29,12 @@ public class DownloadInfo {
 
   public static final String TABLE_NAME = "download_info";
 
-  public static DownloadInfo create(DownloadManager.Request request) {
+  public static DownloadInfo create(DownloadManager.Request request, Uri tempPath, String tempTitle) {
     if (request == null) {
       return null;
     }
-    return new DownloadInfo(0, request.getUri().toString(), request.getDestinationUri().toString(), request.getTitle(), 0);
+    return new DownloadInfo(0, request.getUri().toString(), request.getDestinationUri().toString(), request.getTitle(), 0,
+        tempPath.toString(), tempTitle);
   }
 
   public static DownloadInfo create(Cursor cursor) {
@@ -47,7 +49,9 @@ public class DownloadInfo {
         cursor.getString(cursor.getColumnIndex(Fields.URL)),
         cursor.getString(cursor.getColumnIndex(Fields.DEST_PATH)),
         cursor.getString(cursor.getColumnIndex(Fields.DEST_TITLE)),
-        cursor.getLong(cursor.getColumnIndex(Fields.CONTENT_LENGTH)));
+        cursor.getLong(cursor.getColumnIndex(Fields.CONTENT_LENGTH)),
+        cursor.getString(cursor.getColumnIndex(Fields.TEMP_PATH)),
+        cursor.getString(cursor.getColumnIndex(Fields.TEMP_TITLE)));
   }
 
   private long mContentLength;
@@ -58,14 +62,24 @@ public class DownloadInfo {
 
   private long mId;
 
+  private String mTempPath;
+
+  private String mTempTitle;
+
   private String mUrl;
 
-  protected DownloadInfo(long id, String url, String destPath, String destTitle, long contentLength) {
+  protected DownloadInfo(long id, String url, String destPath, String destTitle, long contentLength, String tempPath, String tempTitle) {
     mId = id;
     mUrl = url;
     mDestPath = destPath;
     mDestTitle = destTitle;
     mContentLength = contentLength;
+    mTempPath = tempPath;
+    mTempTitle = tempTitle;
+  }
+
+  public long getContentLength() {
+    return mContentLength;
   }
 
   public String getDestPath() {
@@ -78,6 +92,14 @@ public class DownloadInfo {
 
   public long getId() {
     return mId;
+  }
+
+  public String getTempPath() {
+    return mTempPath;
+  }
+
+  public String getTempTitle() {
+    return mTempTitle;
   }
 
   public String getUrl() {
@@ -93,6 +115,8 @@ public class DownloadInfo {
     values.put(Fields.DEST_PATH, mDestPath);
     values.put(Fields.DEST_TITLE, mDestTitle);
     values.put(Fields.CONTENT_LENGTH, mContentLength);
+    values.put(Fields.TEMP_PATH, mTempPath);
+    values.put(Fields.TEMP_TITLE, mTempTitle);
     return values;
   }
 
@@ -101,6 +125,8 @@ public class DownloadInfo {
     String CONTENT_LENGTH = "content_length";
     String DEST_PATH = "dest_path";
     String DEST_TITLE = "dest_title";
+    String TEMP_PATH = "temp_path";
+    String TEMP_TITLE = "temp_title";
     String URL = "url";
     String _ID = "_id";
   }

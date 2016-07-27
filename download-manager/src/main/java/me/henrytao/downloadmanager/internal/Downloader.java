@@ -16,7 +16,6 @@
 
 package me.henrytao.downloadmanager.internal;
 
-import android.net.Uri;
 import android.util.Pair;
 
 import java.io.File;
@@ -26,6 +25,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import me.henrytao.downloadmanager.config.Constants;
+import me.henrytao.downloadmanager.utils.FileUtils;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -36,17 +36,22 @@ import okhttp3.ResponseBody;
  */
 public class Downloader {
 
-  public static Downloader create(String url, String destPath, String destName,
-      OnStartDownloadListener onStartDownloadListener,
-      OnDownloadingListener onDownloadingListener) {
-    return new Downloader(url, destPath, destName,
-        onStartDownloadListener,
-        onDownloadingListener);
+  public static Downloader create(String url, String destPath, String destName, String tempPath, String tempName,
+      OnStartDownloadListener onStartDownloadListener, OnDownloadingListener onDownloadingListener,
+      OnDownloadedListener onDownloadedListener) {
+    return new Downloader(url, destPath, destName, tempPath, tempName, onStartDownloadListener, onDownloadingListener,
+        onDownloadedListener);
   }
 
   private final String mDestName;
 
   private final String mDestPath;
+
+  private final OnDownloadedListener mOnDownloadedListener;
+
+  private final String mTempName;
+
+  private final String mTempPath;
 
   private final String mUrl;
 
@@ -56,14 +61,17 @@ public class Downloader {
 
   private OnStartDownloadListener mOnStartDownloadListener;
 
-  protected Downloader(String url, String destPath, String destName,
-      OnStartDownloadListener onStartDownloadListener,
-      OnDownloadingListener onDownloadingListener) {
+  protected Downloader(String url, String destPath, String destName, String tempPath, String tempName,
+      OnStartDownloadListener onStartDownloadListener, OnDownloadingListener onDownloadingListener,
+      OnDownloadedListener onDownloadedListener) {
     mUrl = url;
     mDestPath = destPath;
     mDestName = destName;
+    mTempPath = tempPath;
+    mTempName = tempName;
     mOnStartDownloadListener = onStartDownloadListener;
     mOnDownloadingListener = onDownloadingListener;
+    mOnDownloadedListener = onDownloadedListener;
     mClient = new OkHttpClient.Builder().build();
   }
 
@@ -73,8 +81,8 @@ public class Downloader {
     mOnDownloadingListener = null;
   }
 
-  public void download() throws IllegalStateException, IOException {
-    File file = getDestFile();
+  public void download() throws IOException {
+    File file = getTempFile();
     Pair<Long, Response> executor = execute(file.exists() ? file.length() : 0);
     long bytesRead = executor.first;
     Response response = executor.second;
@@ -84,18 +92,15 @@ public class Downloader {
     IOException exception = null;
     InputStream input = null;
     OutputStream output = null;
+    long contentLength = responseBody.contentLength() + bytesRead;
     try {
       input = responseBody.byteStream();
       output = new FileOutputStream(file, bytesRead != 0);
 
-      long contentLength = responseBody.contentLength() + bytesRead;
       byte data[] = new byte[Constants.BUFFER_SIZE];
       int count;
 
-      if (mOnStartDownloadListener != null) {
-        mOnStartDownloadListener.onStartDownload(bytesRead, contentLength);
-      }
-
+      onStartDownload(bytesRead, contentLength);
       while ((count = input.read(data)) != -1) {
         bytesRead += count;
         output.write(data, 0, count);
@@ -115,6 +120,9 @@ public class Downloader {
     }
     if (exception != null) {
       throw exception;
+    }
+    if (bytesRead == contentLength) {
+      onDownloaded();
     }
   }
 
@@ -140,18 +148,37 @@ public class Downloader {
     return new Pair<>(bytesRead, response);
   }
 
-  private File getDestFile() throws IllegalStateException {
-    File file = new File(Uri.parse(mDestPath).getPath());
-    if (!file.exists() && !file.mkdirs()) {
-      throw new IllegalStateException("Unable to create directory: " + file.getAbsolutePath());
+  private File getDestFile() {
+    return FileUtils.getFile(mDestPath, mDestName);
+  }
+
+  private File getTempFile() throws IllegalStateException {
+    return FileUtils.getFile(mTempPath, mTempName);
+  }
+
+  private void onDownloaded() throws IOException {
+    FileUtils.copy(getTempFile(), getDestFile());
+    FileUtils.delete(getTempFile());
+    if (mOnDownloadedListener != null) {
+      mOnDownloadedListener.onDownloaded();
     }
-    return new File(file, mDestName);
   }
 
   private void onDownloading(long bytesRead, long contentLength, boolean done) {
     if (mOnDownloadingListener != null) {
       mOnDownloadingListener.onDownloading(bytesRead, contentLength, done);
     }
+  }
+
+  private void onStartDownload(long bytesRead, long contentLength) {
+    if (mOnStartDownloadListener != null) {
+      mOnStartDownloadListener.onStartDownload(bytesRead, contentLength);
+    }
+  }
+
+  public interface OnDownloadedListener {
+
+    void onDownloaded();
   }
 
   public interface OnDownloadingListener {
