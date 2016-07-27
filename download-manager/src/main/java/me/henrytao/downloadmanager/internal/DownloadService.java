@@ -20,6 +20,7 @@ import android.app.IntentService;
 import android.content.Intent;
 
 import java.io.File;
+import java.util.Locale;
 
 import me.henrytao.downloadmanager.DownloadManager;
 import me.henrytao.downloadmanager.Info;
@@ -44,9 +45,10 @@ public class DownloadService extends IntentService {
 
   protected DownloadService(String name) {
     super(name);
+    setIntentRedelivery(true);
     mDownloadBus = DownloadBus.getInstance();
-    mLogger = Logger.newInstance(DownloadManager.DEBUG ? Logger.LogLevel.NONE : Logger.LogLevel.NONE);
-    mLogger.d("onHandleIntent | initialized");
+    mLogger = Logger.newInstance(DownloadManager.DEBUG ? Logger.LogLevel.VERBOSE : Logger.LogLevel.NONE);
+    //mLogger.d("onHandleIntent | initialized");
   }
 
   public DownloadService() {
@@ -54,9 +56,16 @@ public class DownloadService extends IntentService {
   }
 
   @Override
+  public void onCreate() {
+    super.onCreate();
+    log("onCreate");
+  }
+
+  @Override
   protected void onHandleIntent(Intent intent) {
-    reset();
     final long id = intent.getLongExtra(EXTRA_DOWNLOAD_ID, 0);
+    log("onHandleIntent | %d", id);
+    reset();
     DownloadInfo downloadInfo = DownloadDbHelper.create(this).find(id);
     if (downloadInfo != null) {
       File destFile = FileUtils.getFile(downloadInfo.getDestPath(), downloadInfo.getDestTitle());
@@ -93,11 +102,14 @@ public class DownloadService extends IntentService {
     return mDownloader != null && mDownloader.isInterrupted();
   }
 
+  private void log(String value, Object... args) {
+    mLogger.d(String.format(Locale.US, "%s | %s", DownloadService.class.getSimpleName(), String.format(Locale.US, value, args)));
+  }
+
   private void onDownloaded(long id, long contentLength) {
     if (isPaused()) {
       return;
     }
-    mLogger.d("onDownloaded");
     mDownloadBus.downloaded(id, contentLength);
   }
 
@@ -106,7 +118,7 @@ public class DownloadService extends IntentService {
       return;
     }
     int percentage = (int) ((100 * bytesRead) / contentLength);
-    mLogger.d("onDownloading: %d%%", percentage);
+    log("onDownloading: %d/100", percentage);
     mDownloadBus.downloading(id, bytesRead, contentLength);
   }
 
@@ -125,7 +137,7 @@ public class DownloadService extends IntentService {
       return;
     }
     DownloadDbHelper.create(this).updateContentLength(id, contentLength);
-    mLogger.d("onStartDownload: %d of %d", bytesRead, contentLength);
+    log("onStartDownload: %d of %d", bytesRead, contentLength);
     mDownloadBus.started(id, bytesRead, contentLength);
   }
 
