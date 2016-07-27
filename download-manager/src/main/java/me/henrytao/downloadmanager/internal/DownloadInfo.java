@@ -34,7 +34,7 @@ public class DownloadInfo {
       return null;
     }
     return new DownloadInfo(0, request.getUri().toString(), request.getDestinationUri().toString(), request.getTitle(), 0,
-        tempPath.toString(), tempTitle);
+        tempPath.toString(), tempTitle, false);
   }
 
   public static DownloadInfo create(Cursor cursor) {
@@ -51,7 +51,8 @@ public class DownloadInfo {
         cursor.getString(cursor.getColumnIndex(Fields.DEST_TITLE)),
         cursor.getLong(cursor.getColumnIndex(Fields.CONTENT_LENGTH)),
         cursor.getString(cursor.getColumnIndex(Fields.TEMP_PATH)),
-        cursor.getString(cursor.getColumnIndex(Fields.TEMP_TITLE)));
+        cursor.getString(cursor.getColumnIndex(Fields.TEMP_TITLE)),
+        cursor.getInt(cursor.getColumnIndex(Fields.PAUSED)) == 1);
   }
 
   private long mContentLength;
@@ -62,13 +63,16 @@ public class DownloadInfo {
 
   private long mId;
 
+  private boolean mIsPaused;
+
   private String mTempPath;
 
   private String mTempTitle;
 
   private String mUrl;
 
-  protected DownloadInfo(long id, String url, String destPath, String destTitle, long contentLength, String tempPath, String tempTitle) {
+  protected DownloadInfo(long id, String url, String destPath, String destTitle, long contentLength, String tempPath, String tempTitle,
+      boolean isPaused) {
     mId = id;
     mUrl = url;
     mDestPath = destPath;
@@ -76,6 +80,7 @@ public class DownloadInfo {
     mContentLength = contentLength;
     mTempPath = tempPath;
     mTempTitle = tempTitle;
+    mIsPaused = isPaused;
   }
 
   public long getContentLength() {
@@ -117,6 +122,7 @@ public class DownloadInfo {
     values.put(Fields.CONTENT_LENGTH, mContentLength);
     values.put(Fields.TEMP_PATH, mTempPath);
     values.put(Fields.TEMP_TITLE, mTempTitle);
+    values.put(Fields.PAUSED, mIsPaused ? 1 : 0);
     return values;
   }
 
@@ -125,6 +131,7 @@ public class DownloadInfo {
     String CONTENT_LENGTH = "content_length";
     String DEST_PATH = "dest_path";
     String DEST_TITLE = "dest_title";
+    String PAUSED = "paused";
     String TEMP_PATH = "temp_path";
     String TEMP_TITLE = "temp_title";
     String URL = "url";

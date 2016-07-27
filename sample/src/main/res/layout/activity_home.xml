@@ -37,5 +37,16 @@
       android:layout_height="wrap_content"
       android:onClick="@{() -> viewModel.onDownloadClicked()}"
       android:text="Download" />
+
+    <Button
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:onClick="@{() -> viewModel.onPauseClicked()}"
+      android:text="Pause" />
+
+    <TextView
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="@{viewModel.progress}" />
   </LinearLayout>
 </layout>

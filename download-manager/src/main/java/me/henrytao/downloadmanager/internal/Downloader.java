@@ -57,6 +57,10 @@ public class Downloader {
 
   private OkHttpClient mClient;
 
+  private boolean mIsClosed;
+
+  private boolean mIsInterrupted;
+
   private OnDownloadingListener mOnDownloadingListener;
 
   private OnStartDownloadListener mOnStartDownloadListener;
@@ -76,6 +80,7 @@ public class Downloader {
   }
 
   public void close() {
+    mIsClosed = true;
     mClient = null;
     mOnStartDownloadListener = null;
     mOnDownloadingListener = null;
@@ -105,6 +110,9 @@ public class Downloader {
         bytesRead += count;
         output.write(data, 0, count);
         onDownloading(bytesRead, contentLength, bytesRead != contentLength);
+        if (mIsInterrupted || mIsClosed) {
+          break;
+        }
       }
     } catch (IOException ex) {
       exception = ex;
@@ -122,8 +130,12 @@ public class Downloader {
       throw exception;
     }
     if (bytesRead == contentLength) {
-      onDownloaded();
+      onDownloaded(contentLength);
     }
+  }
+
+  public void interrupt() {
+    mIsInterrupted = true;
   }
 
   private Pair<Long, Response> execute(long bytesRead) throws IOException {
@@ -156,11 +168,11 @@ public class Downloader {
     return FileUtils.getFile(mTempPath, mTempName);
   }
 
-  private void onDownloaded() throws IOException {
+  private void onDownloaded(long contentLength) throws IOException {
     FileUtils.copy(getTempFile(), getDestFile());
     FileUtils.delete(getTempFile());
     if (mOnDownloadedListener != null) {
-      mOnDownloadedListener.onDownloaded();
+      mOnDownloadedListener.onDownloaded(contentLength);
     }
   }
 
@@ -178,7 +190,7 @@ public class Downloader {
 
   public interface OnDownloadedListener {
 
-    void onDownloaded();
+    void onDownloaded(long contentLength);
   }
 
   public interface OnDownloadingListener {

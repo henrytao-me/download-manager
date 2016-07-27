@@ -24,9 +24,11 @@ import android.os.Environment;
 import java.io.File;
 import java.util.UUID;
 
+import me.henrytao.downloadmanager.internal.DownloadBus;
 import me.henrytao.downloadmanager.internal.DownloadDbHelper;
 import me.henrytao.downloadmanager.internal.DownloadInfo;
 import me.henrytao.downloadmanager.internal.DownloadService;
+import me.henrytao.downloadmanager.utils.Logger;
 import rx.Observable;
 
 /**
@@ -57,14 +59,21 @@ public class DownloadManager {
 
   private final Context mContext;
 
+  private final DownloadBus mDownloadBus;
+
+  private final Logger mLogger;
+
   protected DownloadManager(Context context) {
     mContext = context.getApplicationContext();
+    mDownloadBus = DownloadBus.getInstance();
+    mLogger = Logger.newInstance(DownloadManager.DEBUG ? Logger.LogLevel.VERBOSE : Logger.LogLevel.NONE);
   }
 
   public long enqueue(Request request) {
     request.validate();
     DownloadInfo downloadInfo = DownloadInfo.create(request, getTempPath(mContext), UUID.randomUUID().toString());
     long id = DownloadDbHelper.create(mContext).insert(downloadInfo);
+    mDownloadBus.enqueue(id);
     enqueue(id);
     return id;
   }
@@ -75,10 +84,19 @@ public class DownloadManager {
     mContext.startService(intent);
   }
 
-  public Observable<DownloadInfo> observe(long id) {
-    return Observable.create(subscriber -> {
+  public Observable<Info> observe(long id) {
+    return mDownloadBus.observe(id);
+  }
 
-    });
+  public void pause(long id) {
+    DownloadDbHelper.create(mContext).updateState(id, true);
+    mDownloadBus.pause(id);
+  }
+
+  public void resume(long id) {
+    DownloadDbHelper.create(mContext).updateState(id, false);
+    mDownloadBus.resume(id);
+    enqueue(id);
   }
 
   public static class Request {

@@ -67,7 +67,8 @@ public class DownloadDbHelper extends SQLiteOpenHelper {
             DownloadInfo.Fields.DEST_TITLE,
             DownloadInfo.Fields.CONTENT_LENGTH,
             DownloadInfo.Fields.TEMP_PATH,
-            DownloadInfo.Fields.TEMP_TITLE
+            DownloadInfo.Fields.TEMP_TITLE,
+            DownloadInfo.Fields.PAUSED
         },
         DownloadInfo.Fields._ID + " = ?",
         new String[]{String.valueOf(downloadId)},
@@ -104,6 +105,19 @@ public class DownloadDbHelper extends SQLiteOpenHelper {
     db.close();
   }
 
+  public void updateState(long downloadId, boolean isPaused) {
+    SQLiteDatabase db = getWritableDatabase();
+    ContentValues values = new ContentValues();
+    values.put(DownloadInfo.Fields.PAUSED, isPaused ? 1 : 0);
+    db.update(
+        DownloadInfo.TABLE_NAME,
+        values,
+        DownloadInfo.Fields._ID + " = ?",
+        new String[]{String.valueOf(downloadId)}
+    );
+    db.close();
+  }
+
   private void createDownloadInfoTable(SQLiteDatabase db) {
     db.execSQL("CREATE TABLE IF NOT EXISTS " + DownloadInfo.TABLE_NAME + " ( "
         + DownloadInfo.Fields._ID + C_INTEGER + "PRIMARY KEY AUTOINCREMENT" + C_COMMA
@@ -112,7 +126,8 @@ public class DownloadDbHelper extends SQLiteOpenHelper {
         + DownloadInfo.Fields.DEST_TITLE + C_TEXT + C_COMMA
         + DownloadInfo.Fields.CONTENT_LENGTH + C_INTEGER + C_COMMA
         + DownloadInfo.Fields.TEMP_PATH + C_TEXT + C_COMMA
-        + DownloadInfo.Fields.TEMP_TITLE + C_TEXT
+        + DownloadInfo.Fields.TEMP_TITLE + C_TEXT + C_COMMA
+        + DownloadInfo.Fields.PAUSED + C_INTEGER
         + " )");
   }
 }

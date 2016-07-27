@@ -17,12 +17,19 @@
 package me.henrytao.downloadmanager.sample.ui.home;
 
 import android.content.Context;
+import android.databinding.ObservableField;
 import android.os.Environment;
+
+import java.util.concurrent.TimeUnit;
 
 import me.henrytao.downloadmanager.DownloadManager;
 import me.henrytao.downloadmanager.DownloadManager.Request;
+import me.henrytao.downloadmanager.Info;
 import me.henrytao.downloadmanager.sample.App;
 import me.henrytao.downloadmanager.sample.ui.base.BaseViewModel;
+import me.henrytao.downloadmanager.utils.Logger;
+import me.henrytao.downloadmanager.utils.rx.Transformer;
+import me.henrytao.mvvmlifecycle.rx.UnsubscribeLifeCycle;
 
 /**
  * Created by henrytao on 7/1/16.
@@ -31,9 +38,13 @@ public class HomeViewModel extends BaseViewModel {
 
   private final Context mContext;
 
+  public ObservableField<String> progress = new ObservableField<>();
+
   private long mDownloadId;
 
   private DownloadManager mDownloadManager;
+
+  private Logger mLogger;
 
   public HomeViewModel() {
     mContext = App.getInstance();
@@ -42,6 +53,7 @@ public class HomeViewModel extends BaseViewModel {
   @Override
   public void onCreateView() {
     super.onCreateView();
+    mLogger = Logger.newInstance(DownloadManager.DEBUG ? Logger.LogLevel.VERBOSE : Logger.LogLevel.NONE);
     mDownloadManager = DownloadManager.getInstance(mContext);
   }
 
@@ -51,13 +63,28 @@ public class HomeViewModel extends BaseViewModel {
           .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "/")
           .setTitle("test.apk");
       mDownloadId = mDownloadManager.enqueue(request);
+      showProgress(mDownloadId);
     } else {
-      mDownloadManager.enqueue(mDownloadId);
+      mDownloadManager.resume(mDownloadId);
     }
-    showProgress(mDownloadId);
+  }
+
+  public void onPauseClicked() {
+    mDownloadManager.pause(mDownloadId);
   }
 
   private void showProgress(long downloadId) {
-    //manageSubscription();
+    manageSubscription(mDownloadManager.observe(downloadId)
+        .compose(Transformer.applyComputationScheduler())
+        //.map(info -> {
+        //  double percentage = info.contentLength > 0 ? info.bytesRead / info.contentLength : 0;
+        //  return new Info(info.state, ((int) (percentage * 10000) * info.contentLength) / 10000, info.contentLength);
+        //})
+        //.distinctUntilChanged()
+        .buffer(1000, TimeUnit.MILLISECONDS)
+        .map(infos -> infos.get(infos.size() - 1))
+        .subscribe(info -> {
+          mLogger.d("Progress %s | %s | %d | %d", downloadId, info.state, info.bytesRead, info.contentLength);
+        }), UnsubscribeLifeCycle.DESTROY_VIEW);
   }
 }
