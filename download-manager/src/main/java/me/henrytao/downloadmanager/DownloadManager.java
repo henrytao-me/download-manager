@@ -17,30 +17,28 @@
 package me.henrytao.downloadmanager;
 
 import android.content.Context;
-import android.content.Intent;
 import android.net.Uri;
 import android.os.Environment;
-import android.os.Parcel;
-import android.os.Parcelable;
 
 import java.io.File;
 
-import me.henrytao.downloadmanager.data.DownloadInfo;
-import me.henrytao.downloadmanager.internal.DownloadService;
+import me.henrytao.downloadmanager.internal.DownloadBus;
 import rx.Observable;
 
 /**
  * Created by henrytao on 7/25/16.
  */
-public class Downloader {
+public class DownloadManager {
 
-  private static Downloader sInstance;
+  public static boolean DEBUG = false;
 
-  public static Downloader getInstance(Context context) {
+  private static DownloadManager sInstance;
+
+  public static DownloadManager getInstance(Context context) {
     if (sInstance == null) {
-      synchronized (Downloader.class) {
+      synchronized (DownloadManager.class) {
         if (sInstance == null) {
-          sInstance = new Downloader(context);
+          sInstance = new DownloadManager(context);
         }
       }
     }
@@ -49,44 +47,40 @@ public class Downloader {
 
   private final Context mContext;
 
-  protected Downloader(Context context) {
+  private final DownloadBus mDownloadBus;
+
+  protected DownloadManager(Context context) {
     mContext = context.getApplicationContext();
+    mDownloadBus = DownloadBus.getInstance(mContext);
   }
 
   public long enqueue(Request request) {
-    Intent intent = new Intent(mContext, DownloadService.class);
-    intent.putExtra(DownloadService.EXTRA_REQUEST, request);
-    mContext.startService(intent);
-    return 0;
+    return mDownloadBus.enqueue(request);
   }
 
-  public long findId(Request request) {
-    return 0;
+  public Info.State getState(long id) {
+    return mDownloadBus.getState(id);
   }
 
-  public Observable<DownloadInfo> observe(long id) {
-    return Observable.create(subscriber -> {
-
-    });
+  public Observable<Info> observe(long id) {
+    return mDownloadBus.observe(id);
   }
 
-  public static class Request implements Parcelable {
+  public void pause(long id) {
+    mDownloadBus.pause(id);
+  }
 
-    public static final Creator<Request> CREATOR = new Creator<Request>() {
-      @Override
-      public Request createFromParcel(Parcel source) {
-        return new Request(source);
-      }
+  public void resume(long id) {
+    mDownloadBus.resume(id);
+  }
 
-      @Override
-      public Request[] newArray(int size) {
-        return new Request[size];
-      }
-    };
+  public void setTempPath(Uri tempPath) {
+    mDownloadBus.setTempPath(tempPath);
+  }
+
+  public static class Request {
 
     private final Uri mUri;
-
-    private String mDescription;
 
     private Uri mDestinationUri;
 
@@ -107,29 +101,26 @@ public class Downloader {
       this(Uri.parse(uri));
     }
 
-    protected Request(Parcel in) {
-      this.mUri = in.readParcelable(Uri.class.getClassLoader());
-      this.mDescription = in.readString();
-      this.mDestinationUri = in.readParcelable(Uri.class.getClassLoader());
-      this.mTitle = in.readString();
+    public Uri getDestinationUri() {
+      return mDestinationUri;
     }
 
-    @Override
-    public int describeContents() {
-      return 0;
-    }
-
-    @Override
-    public void writeToParcel(Parcel dest, int flags) {
-      dest.writeParcelable(this.mUri, flags);
-      dest.writeString(this.mDescription);
-      dest.writeParcelable(this.mDestinationUri, flags);
-      dest.writeString(this.mTitle);
-    }
-
-    public Request setDescription(String description) {
-      mDescription = description;
+    public Request setDestinationUri(Uri uri) {
+      mDestinationUri = uri;
       return this;
+    }
+
+    public String getTitle() {
+      return mTitle == null || mTitle.length() == 0 ? mUri.getLastPathSegment() : mTitle;
+    }
+
+    public Request setTitle(String title) {
+      mTitle = title;
+      return this;
+    }
+
+    public Uri getUri() {
+      return mUri;
     }
 
     public Request setDestinationInExternalPublicDir(String dirType, String subPath) {
@@ -149,9 +140,16 @@ public class Downloader {
       return this;
     }
 
-    public Request setTitle(String title) {
-      mTitle = title;
-      return this;
+    public void validate() throws IllegalArgumentException {
+      if (getUri() == null) {
+        throw new IllegalArgumentException("Uri can not be null");
+      }
+      if (getDestinationUri() == null) {
+        throw new IllegalArgumentException("DestinationUri can not be null");
+      }
+      if (getTitle() == null || getTitle().length() == 0) {
+        throw new IllegalArgumentException("Title can not be null");
+      }
     }
 
     private void setDestinationFromBase(File base, String subPath) {

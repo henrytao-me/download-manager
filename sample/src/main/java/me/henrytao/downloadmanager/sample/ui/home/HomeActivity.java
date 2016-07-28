@@ -16,10 +16,13 @@
 
 package me.henrytao.downloadmanager.sample.ui.home;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.databinding.DataBindingUtil;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v7.app.AlertDialog;
 import android.view.Menu;
 
 import me.henrytao.downloadmanager.sample.ui.base.BaseActivity;
@@ -61,5 +64,21 @@ public class HomeActivity extends BaseActivity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setSupportActionBar(mBinding.toolbar);
+    requestWriteExternalStoragePermission();
+  }
+
+  private void requestWriteExternalStoragePermission() {
+    // Should we show an explanation?
+    if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+      new AlertDialog.Builder(this)
+          .setTitle("Inform and request")
+          .setMessage("You need to enable permissions, bla bla bla")
+          .setPositiveButton("OK", (dialog, which) -> {
+            ActivityCompat.requestPermissions(HomeActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 300);
+          })
+          .show();
+    } else {
+      ActivityCompat.requestPermissions(HomeActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 300);
+    }
   }
 }

@@ -14,33 +14,18 @@
  * limitations under the License.
  */
 
-package me.henrytao.downloadmanager.sample;
-
-import com.facebook.stetho.Stetho;
-
-import android.app.Application;
-import android.content.Context;
-
-import me.henrytao.downloadmanager.DownloadManager;
+package me.henrytao.downloadmanager.utils;
 
 /**
- * Created by henrytao on 6/17/16.
+ * Created by henrytao on 7/28/16.
  */
-public class App extends Application {
+public class StringUtils {
 
-  private static Context sInstance;
-
-  public static Context getInstance() {
-    return sInstance;
+  public static boolean equals(String a, String b) {
+    return a == b || (a != null && b != null && a.length() == b.length() && a.equals(b));
   }
 
-  @Override
-  public void onCreate() {
-    super.onCreate();
-    sInstance = this;
-
-    Stetho.initializeWithDefaults(this);
-
-    DownloadManager.DEBUG = true;
+  public static String toLowerCase(String value) {
+    return value != null ? value.toLowerCase() : null;
   }
 }

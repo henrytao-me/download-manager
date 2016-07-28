@@ -27,7 +27,7 @@ ext {
       minSdkVersion    : 11,
       targetSdkVersion : 23,
       versionCode      : 1,
-      versionName      : "1.0.0"
+      versionName      : "0.1.0"
   ]
 
   versioning = [
@@ -67,8 +67,9 @@ ext {
   ]
 
   dependencies = [
-      "io.reactivex:rxandroid"                     : "io.reactivex:rxandroid:1.2.1",
-      "io.reactivex:rxjava"                        : "io.reactivex:rxjava:1.1.6"
+      "com.squareup.okhttp3:okhttp": "com.squareup.okhttp3:okhttp:3.4.1",
+      "io.reactivex:rxandroid"     : "io.reactivex:rxandroid:1.2.1",
+      "io.reactivex:rxjava"        : "io.reactivex:rxjava:1.1.6"
   ]
 
   sampleDependencies = [

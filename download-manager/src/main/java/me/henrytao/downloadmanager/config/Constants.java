@@ -14,11 +14,22 @@
  * limitations under the License.
  */
 
-package me.henrytao.downloadmanager.data;
+package me.henrytao.downloadmanager.config;
 
 /**
- * Created by henrytao on 7/25/16.
+ * Created by henrytao on 7/26/16.
  */
-public class DownloadInfo {
+public class Constants {
 
+  public static int BUFFER_SIZE = 2048;
+
+  public interface Exception {
+
+    int REQUESTED_RANGE_NOT_SATISFIABLE = 416;
+  }
+
+  public interface Scheduler {
+
+    long WAKE_UP = 5000;
+  }
 }

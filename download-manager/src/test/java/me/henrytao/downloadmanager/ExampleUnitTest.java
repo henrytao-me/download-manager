@@ -16,9 +16,76 @@
 
 package me.henrytao.downloadmanager;
 
+import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
+import org.junit.Test;
+
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
+
+import rx.Observable;
+import rx.schedulers.Schedulers;
+
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.junit.Assert.assertThat;
+
 /**
  * To work on unit tests, switch the Test Artifact in the Build Variants view.
  */
 public class ExampleUnitTest {
 
+  @Test
+  public void test() {
+    String test = "\"heldfdsfs\"";
+    assertThat(test.replaceAll("\"", ""), equalTo("heldfdsfs"));
+  }
+
+  @Test
+  public void testThread() {
+    ThreadB b = new ThreadB();
+
+    Observable.timer(5000, TimeUnit.MILLISECONDS).subscribeOn(Schedulers.computation()).subscribe(aLong -> {
+      b.interrupt();
+    });
+
+    synchronized (b) {
+      try {
+        System.out.println("Waiting for b to complete");
+        b.start();
+        b.wait();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+      System.out.println("Total is: " + b.total);
+    }
+    System.out.println("Done");
+  }
+
+  private void log(String value, Object... objects) {
+    System.out.println(String.format(Locale.US, value, objects));
+  }
+
+  public static class ThreadB extends Thread {
+
+    int total;
+
+    @Override
+    public void run() {
+      synchronized (this) {
+        try {
+          for (int i = 0; i < 10; i++) {
+            if (interrupted()) {
+
+            }
+            total++;
+            System.out.println("Output: " + total);
+            sleep(1000);
+          }
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+        notify();
+      }
+    }
+  }
 }
