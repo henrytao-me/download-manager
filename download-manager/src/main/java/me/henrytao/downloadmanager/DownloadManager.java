@@ -74,8 +74,7 @@ public class DownloadManager {
 
   public long enqueue(Request request) {
     request.validate();
-    DownloadInfo downloadInfo = DownloadInfo.create(request, getTempPath(mContext), UUID.randomUUID().toString());
-    long id = mDownloadDbHelper.insert(downloadInfo);
+    long id = mDownloadDbHelper.insert(DownloadInfo.create(request, getTempPath(mContext), UUID.randomUUID().toString()));
     mDownloadBus.enqueue(id);
     enqueue(id);
     return id;

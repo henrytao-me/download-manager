@@ -16,6 +16,8 @@
 
 package me.henrytao.downloadmanager;
 
+import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Locale;
@@ -24,6 +26,9 @@ import java.util.concurrent.TimeUnit;
 import rx.Observable;
 import rx.schedulers.Schedulers;
 
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.junit.Assert.assertThat;
+
 /**
  * To work on unit tests, switch the Test Artifact in the Build Variants view.
  */
@@ -31,7 +36,8 @@ public class ExampleUnitTest {
 
   @Test
   public void test() {
-
+    String test = "\"heldfdsfs\"";
+    assertThat(test.replaceAll("\"", ""), equalTo("heldfdsfs"));
   }
 
   @Test
