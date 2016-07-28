@@ -14,22 +14,18 @@
  * limitations under the License.
  */
 
-package me.henrytao.downloadmanager.config;
+package me.henrytao.downloadmanager.utils;
 
 /**
- * Created by henrytao on 7/26/16.
+ * Created by henrytao on 7/28/16.
  */
-public class Constants {
+public class StringUtils {
 
-  public static int BUFFER_SIZE = 2048;
-
-  public interface Exception {
-
-    int REQUESTED_RANGE_NOT_SATISFIABLE = 416;
+  public static boolean equals(String a, String b) {
+    return a == b || (a != null && b != null && a.length() == b.length() && a.equals(b));
   }
 
-  public interface Scheduler {
-
-    long WAKE_UP = 5000;
+  public static String toLowerCase(String value) {
+    return value != null ? value.toLowerCase() : null;
   }
 }

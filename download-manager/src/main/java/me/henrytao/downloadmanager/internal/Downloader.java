@@ -16,8 +16,6 @@
 
 package me.henrytao.downloadmanager.internal;
 
-import android.util.Pair;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -26,6 +24,7 @@ import java.io.OutputStream;
 
 import me.henrytao.downloadmanager.config.Constants;
 import me.henrytao.downloadmanager.utils.FileUtils;
+import me.henrytao.downloadmanager.utils.StringUtils;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -87,12 +86,13 @@ public class Downloader {
   }
 
   public void download() throws IOException {
-    File file = getTempFile();
-    Pair<Long, Response> executor = execute(file.exists() ? file.length() : 0);
-    long bytesRead = executor.first;
-    Response response = executor.second;
+    Triple<File, Long, Response> executor = execute();
+    File file = executor.first;
+    long bytesRead = executor.second;
+    Response response = executor.third;
 
     // read response
+    String md5 = response.header("ETag");
     ResponseBody responseBody = response.body();
     IOException exception = null;
     InputStream input = null;
@@ -107,12 +107,12 @@ public class Downloader {
 
       onStartDownload(bytesRead, contentLength);
       while ((count = input.read(data)) != -1) {
-        bytesRead += count;
-        output.write(data, 0, count);
-        onDownloading(bytesRead, contentLength, bytesRead != contentLength);
         if (mIsInterrupted || mIsClosed) {
           break;
         }
+        bytesRead += count;
+        output.write(data, 0, count);
+        onDownloading(bytesRead, contentLength);
       }
     } catch (IOException ex) {
       exception = ex;
@@ -130,7 +130,13 @@ public class Downloader {
       throw exception;
     }
     if (bytesRead == contentLength) {
-      onDownloaded(contentLength);
+      String fileMd5 = FileUtils.getMd5(getTempFile());
+      if (fileMd5 == null || md5 == null || StringUtils.equals(md5.toLowerCase().replaceAll("\"", ""), fileMd5.replaceAll("\"", ""))) {
+        onDownloaded(contentLength);
+      } else {
+        FileUtils.delete(getTempFile());
+        download();
+      }
     }
   }
 
@@ -142,7 +148,9 @@ public class Downloader {
     return mIsInterrupted;
   }
 
-  private Pair<Long, Response> execute(long bytesRead) throws IOException {
+  private Triple<File, Long, Response> execute() throws IOException {
+    File file = getTempFile();
+    long bytesRead = file.exists() ? file.length() : 0;
     Request request = new Request.Builder()
         .url(mUrl)
         .addHeader("Range", "bytes=" + bytesRead + "-")
@@ -151,17 +159,13 @@ public class Downloader {
     if (!response.isSuccessful()) {
       if (response.code() == Constants.Exception.REQUESTED_RANGE_NOT_SATISFIABLE) {
         response.close();
-        // reset downloader if it's out of range
-        bytesRead = 0;
-        request = new Request.Builder()
-            .url(mUrl)
-            .build();
-        response = mClient.newCall(request).execute();
+        FileUtils.delete(file);
+        return execute();
       } else {
         throw new IOException("Unexpected code " + response);
       }
     }
-    return new Pair<>(bytesRead, response);
+    return new Triple<>(file, bytesRead, response);
   }
 
   private File getDestFile() {
@@ -180,9 +184,9 @@ public class Downloader {
     }
   }
 
-  private void onDownloading(long bytesRead, long contentLength, boolean done) {
+  private void onDownloading(long bytesRead, long contentLength) {
     if (mOnDownloadingListener != null) {
-      mOnDownloadingListener.onDownloading(bytesRead, contentLength, done);
+      mOnDownloadingListener.onDownloading(bytesRead, contentLength);
     }
   }
 
@@ -199,11 +203,26 @@ public class Downloader {
 
   public interface OnDownloadingListener {
 
-    void onDownloading(long bytesRead, long contentLength, boolean done);
+    void onDownloading(long bytesRead, long contentLength);
   }
 
   public interface OnStartDownloadListener {
 
     void onStartDownload(long bytesRead, long contentLength);
+  }
+
+  protected static class Triple<F, S, T> {
+
+    public final F first;
+
+    public final S second;
+
+    public final T third;
+
+    protected Triple(F first, S second, T third) {
+      this.first = first;
+      this.second = second;
+      this.third = third;
+    }
   }
 }

@@ -132,7 +132,6 @@ public class DownloadInfo {
   }
 
   public enum State {
-    UNKNOWN(0),
     DOWNLOADED(1),
     DOWNLOADING(2),
     PAUSED(3);
@@ -140,12 +139,10 @@ public class DownloadInfo {
     public static State fromInt(int value) {
       if (value == DOWNLOADED.toInt()) {
         return DOWNLOADED;
-      } else if (value == DOWNLOADING.toInt()) {
-        return DOWNLOADING;
       } else if (value == PAUSED.toInt()) {
         return PAUSED;
       }
-      return UNKNOWN;
+      return DOWNLOADING;
     }
 
     private final int mValue;

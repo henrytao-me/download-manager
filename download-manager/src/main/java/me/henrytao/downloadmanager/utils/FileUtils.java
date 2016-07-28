@@ -24,6 +24,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.security.MessageDigest;
 
 /**
  * Created by henrytao on 7/27/16.
@@ -62,7 +63,7 @@ public class FileUtils {
   }
 
   public static boolean delete(File file) {
-    return file == null || file.delete();
+    return file == null || (file.exists() && file.delete());
   }
 
   public static File getFile(String path, String name) {
@@ -71,6 +72,30 @@ public class FileUtils {
       throw new IllegalStateException("Unable to create directory: " + file.getAbsolutePath());
     }
     return new File(file, name);
+  }
+
+  public static String getMd5(File file) {
+    String md5 = "";
+    try {
+      InputStream input = new FileInputStream(file);
+      byte[] buffer = new byte[1024];
+      MessageDigest md5Hash = MessageDigest.getInstance("MD5");
+      int numRead = 0;
+      while (numRead != -1) {
+        numRead = input.read(buffer);
+        if (numRead > 0) {
+          md5Hash.update(buffer, 0, numRead);
+        }
+      }
+      input.close();
+      byte[] md5Bytes = md5Hash.digest();
+      for (byte md5Byte : md5Bytes) {
+        md5 += Integer.toString((md5Byte & 0xff) + 0x100, 16).substring(1);
+      }
+    } catch (Exception ignore) {
+      ignore.printStackTrace();
+    }
+    return md5.length() > 0 ? md5.toLowerCase() : null;
   }
 
   public static boolean move(File input, File output) {

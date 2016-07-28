@@ -22,6 +22,9 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created by henrytao on 7/26/16.
  */
@@ -85,6 +88,40 @@ public class DownloadDbHelper extends SQLiteOpenHelper {
     return downloadInfo;
   }
 
+  public List<DownloadInfo> findAllDownloading() {
+    List<DownloadInfo> result = new ArrayList<>();
+    SQLiteDatabase db = getReadableDatabase();
+    Cursor cursor = db.query(
+        DownloadInfo.TABLE_NAME,
+        new String[]{
+            DownloadInfo.Fields._ID,
+            DownloadInfo.Fields.URL,
+            DownloadInfo.Fields.DEST_PATH,
+            DownloadInfo.Fields.DEST_TITLE,
+            DownloadInfo.Fields.CONTENT_LENGTH,
+            DownloadInfo.Fields.TEMP_PATH,
+            DownloadInfo.Fields.TEMP_TITLE,
+            DownloadInfo.Fields.STATE
+        },
+        DownloadInfo.Fields.STATE + " = ?",
+        new String[]{String.valueOf(DownloadInfo.State.DOWNLOADING.toInt())},
+        null,
+        null,
+        null);
+    cursor.moveToFirst();
+    while (true) {
+      result.add(DownloadInfo.create(cursor));
+      if (!cursor.moveToNext()) {
+        break;
+      }
+    }
+    if (!cursor.isClosed()) {
+      cursor.close();
+    }
+    db.close();
+    return result;
+  }
+
   public long insert(DownloadInfo downloadInfo) {
     SQLiteDatabase db = getWritableDatabase();
     long id = db.insert(DownloadInfo.TABLE_NAME, null, downloadInfo.toContentValues());
@@ -92,30 +129,32 @@ public class DownloadDbHelper extends SQLiteOpenHelper {
     return id;
   }
 
-  public void updateContentLength(long downloadId, long contentLength) {
+  public boolean updateContentLength(long downloadId, long contentLength) {
     SQLiteDatabase db = getWritableDatabase();
     ContentValues values = new ContentValues();
     values.put(DownloadInfo.Fields.CONTENT_LENGTH, contentLength);
-    db.update(
+    int count = db.update(
         DownloadInfo.TABLE_NAME,
         values,
         DownloadInfo.Fields._ID + " = ?",
         new String[]{String.valueOf(downloadId)}
     );
     db.close();
+    return count > 0;
   }
 
-  public void updateState(long downloadId, DownloadInfo.State state) {
+  public boolean updateState(long downloadId, DownloadInfo.State state) {
     SQLiteDatabase db = getWritableDatabase();
     ContentValues values = new ContentValues();
     values.put(DownloadInfo.Fields.STATE, state.toInt());
-    db.update(
+    int count = db.update(
         DownloadInfo.TABLE_NAME,
         values,
-        DownloadInfo.Fields._ID + " = ?",
-        new String[]{String.valueOf(downloadId)}
+        DownloadInfo.Fields._ID + " = ?" + " AND " + DownloadInfo.Fields.STATE + " <> ?",
+        new String[]{String.valueOf(downloadId), String.valueOf(DownloadInfo.State.DOWNLOADED.toInt())}
     );
     db.close();
+    return count > 0;
   }
 
   private void createDownloadInfoTable(SQLiteDatabase db) {

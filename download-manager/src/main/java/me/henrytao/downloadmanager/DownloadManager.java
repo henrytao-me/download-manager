@@ -17,17 +17,12 @@
 package me.henrytao.downloadmanager;
 
 import android.content.Context;
-import android.content.Intent;
 import android.net.Uri;
 import android.os.Environment;
 
 import java.io.File;
-import java.util.UUID;
 
 import me.henrytao.downloadmanager.internal.DownloadBus;
-import me.henrytao.downloadmanager.internal.DownloadDbHelper;
-import me.henrytao.downloadmanager.internal.DownloadInfo;
-import me.henrytao.downloadmanager.internal.DownloadService;
 import rx.Observable;
 
 /**
@@ -38,8 +33,6 @@ public class DownloadManager {
   public static boolean DEBUG = false;
 
   private static DownloadManager sInstance;
-
-  private static Uri sTempPath;
 
   public static DownloadManager getInstance(Context context) {
     if (sInstance == null) {
@@ -52,73 +45,37 @@ public class DownloadManager {
     return sInstance;
   }
 
-  public static void setTempPath(Uri tempPath) {
-    sTempPath = tempPath;
-  }
-
-  private static Uri getTempPath(Context context) {
-    return sTempPath != null ? sTempPath : Uri.fromFile(context.getCacheDir());
-  }
-
   private final Context mContext;
 
   private final DownloadBus mDownloadBus;
 
-  private final DownloadDbHelper mDownloadDbHelper;
-
   protected DownloadManager(Context context) {
     mContext = context.getApplicationContext();
-    mDownloadBus = DownloadBus.getInstance();
-    mDownloadDbHelper = DownloadDbHelper.create(mContext);
+    mDownloadBus = DownloadBus.getInstance(mContext);
   }
 
   public long enqueue(Request request) {
-    request.validate();
-    DownloadInfo downloadInfo = DownloadInfo.create(request, getTempPath(mContext), UUID.randomUUID().toString());
-    long id = mDownloadDbHelper.insert(downloadInfo);
-    mDownloadBus.enqueue(id);
-    enqueue(id);
-    return id;
+    return mDownloadBus.enqueue(request);
   }
 
-  public void enqueue(long id) {
-    Intent intent = new Intent(mContext, DownloadService.class);
-    intent.putExtra(DownloadService.EXTRA_DOWNLOAD_ID, id);
-    mContext.startService(intent);
+  public Info.State getState(long id) {
+    return mDownloadBus.getState(id);
   }
 
   public Observable<Info> observe(long id) {
-    if (!mDownloadBus.exist(id)) {
-      DownloadInfo downloadInfo = mDownloadDbHelper.find(id);
-      if (downloadInfo != null) {
-        switch (downloadInfo.getState()) {
-          case DOWNLOADED:
-            mDownloadBus.downloaded(id, downloadInfo.getContentLength());
-            break;
-          case DOWNLOADING:
-            mDownloadBus.enqueue(id);
-            break;
-          case PAUSED:
-            mDownloadBus.pause(id);
-            break;
-          default:
-            mDownloadBus.invalid(id);
-            break;
-        }
-      }
-    }
     return mDownloadBus.observe(id);
   }
 
   public void pause(long id) {
-    mDownloadDbHelper.updateState(id, DownloadInfo.State.PAUSED);
     mDownloadBus.pause(id);
   }
 
   public void resume(long id) {
-    mDownloadDbHelper.updateState(id, DownloadInfo.State.DOWNLOADING);
     mDownloadBus.resume(id);
-    enqueue(id);
+  }
+
+  public void setTempPath(Uri tempPath) {
+    mDownloadBus.setTempPath(tempPath);
   }
 
   public static class Request {
