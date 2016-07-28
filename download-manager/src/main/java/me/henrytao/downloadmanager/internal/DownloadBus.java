@@ -81,6 +81,12 @@ public class DownloadBus {
     get(id).onNext(new Info(Info.State.ERROR, throwable));
   }
 
+  public Intent getIntentService(long id) {
+    Intent intent = new Intent(mContext, DownloadService.class);
+    intent.putExtra(DownloadService.EXTRA_DOWNLOAD_ID, id);
+    return intent;
+  }
+
   public synchronized Info.State getState(long id) {
     BehaviorSubject<Info> subject = get(id);
     if (!subject.hasValue()) {
@@ -155,8 +161,7 @@ public class DownloadBus {
   }
 
   private long enqueue(long id) {
-    Intent intent = new Intent(mContext, DownloadService.class);
-    intent.putExtra(DownloadService.EXTRA_DOWNLOAD_ID, id);
+    Intent intent = getIntentService(id);
     mContext.startService(intent);
     get(id).onNext(new Info(Info.State.QUEUEING, 0, 0));
     return id;

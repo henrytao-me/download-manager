@@ -27,4 +27,9 @@ public class Constants {
 
     int REQUESTED_RANGE_NOT_SATISFIABLE = 416;
   }
+
+  public interface Scheduler {
+
+    long WAKE_UP = 5000;
+  }
 }

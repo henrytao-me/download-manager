@@ -16,13 +16,17 @@
 
 package me.henrytao.downloadmanager.internal;
 
+import android.app.AlarmManager;
 import android.app.IntentService;
+import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 
 import java.util.Locale;
 
 import me.henrytao.downloadmanager.DownloadManager;
 import me.henrytao.downloadmanager.Info;
+import me.henrytao.downloadmanager.config.Constants;
 import me.henrytao.downloadmanager.utils.Logger;
 import rx.Subscription;
 
@@ -75,12 +79,12 @@ public class DownloadService extends IntentService {
           (bytesRead, contentLength) -> onDownloading(id, bytesRead, contentLength),
           (contentLength) -> onDownloaded(id, contentLength)
       );
+      mSubscription = mDownloadBus
+          .observe(id)
+          .filter(info -> info.state == Info.State.PAUSED)
+          .subscribe(info -> interrupt(id), Throwable::printStackTrace);
       try {
         mDownloader.download();
-        mSubscription = mDownloadBus
-            .observe(id)
-            .filter(info -> info.state == Info.State.PAUSED)
-            .subscribe(info -> interrupt(id), Throwable::printStackTrace);
       } catch (Exception exception) {
         onError(id, exception);
       } finally {
@@ -118,6 +122,7 @@ public class DownloadService extends IntentService {
 
   private void onError(long id, Throwable throwable) {
     mDownloadBus.error(id, throwable);
+    reschedule(id);
   }
 
   private void onStartDownload(long id, long bytesRead, long contentLength) {
@@ -127,6 +132,13 @@ public class DownloadService extends IntentService {
     DownloadDbHelper.create(this).updateContentLength(id, contentLength);
     log("onStartDownload: %d of %d", bytesRead, contentLength);
     mDownloadBus.started(id, bytesRead, contentLength);
+  }
+
+  private void reschedule(long id) {
+    // TODO: exponential back off here
+    AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+    PendingIntent alarmIntent = PendingIntent.getService(this, 0, mDownloadBus.getIntentService(id), 0);
+    alarmManager.set(AlarmManager.RTC_WAKEUP, Constants.Scheduler.WAKE_UP, alarmIntent);
   }
 
   private void reset() {

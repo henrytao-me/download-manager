@@ -107,12 +107,12 @@ public class Downloader {
 
       onStartDownload(bytesRead, contentLength);
       while ((count = input.read(data)) != -1) {
-        bytesRead += count;
-        output.write(data, 0, count);
-        onDownloading(bytesRead, contentLength);
         if (mIsInterrupted || mIsClosed) {
           break;
         }
+        bytesRead += count;
+        output.write(data, 0, count);
+        onDownloading(bytesRead, contentLength);
       }
     } catch (IOException ex) {
       exception = ex;

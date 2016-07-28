@@ -150,8 +150,8 @@ public class DownloadDbHelper extends SQLiteOpenHelper {
     int count = db.update(
         DownloadInfo.TABLE_NAME,
         values,
-        DownloadInfo.Fields._ID + " = ?",
-        new String[]{String.valueOf(downloadId)}
+        DownloadInfo.Fields._ID + " = ?" + " AND " + DownloadInfo.Fields.STATE + " <> ?",
+        new String[]{String.valueOf(downloadId), String.valueOf(DownloadInfo.State.DOWNLOADED.toInt())}
     );
     db.close();
     return count > 0;
