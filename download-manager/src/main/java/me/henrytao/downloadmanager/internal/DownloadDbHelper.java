@@ -108,11 +108,12 @@ public class DownloadDbHelper extends SQLiteOpenHelper {
         null,
         null,
         null);
-    cursor.moveToFirst();
-    while (true) {
-      result.add(DownloadInfo.create(cursor));
-      if (!cursor.moveToNext()) {
-        break;
+    if (cursor.moveToFirst()) {
+      while (true) {
+        result.add(DownloadInfo.create(cursor));
+        if (!cursor.moveToNext()) {
+          break;
+        }
       }
     }
     if (!cursor.isClosed()) {

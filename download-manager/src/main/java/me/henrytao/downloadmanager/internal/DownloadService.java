@@ -64,6 +64,18 @@ public class DownloadService extends IntentService {
   }
 
   @Override
+  public void onDestroy() {
+    super.onDestroy();
+    log("onDestroy");
+  }
+
+  @Override
+  public void onTaskRemoved(Intent rootIntent) {
+    super.onTaskRemoved(rootIntent);
+    log("onTaskRemoved");
+  }
+
+  @Override
   protected void onHandleIntent(Intent intent) {
     final long id = intent.getLongExtra(EXTRA_DOWNLOAD_ID, 0);
     log("onHandleIntent | %d", id);

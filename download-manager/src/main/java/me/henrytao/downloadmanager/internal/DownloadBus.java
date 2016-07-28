@@ -77,6 +77,13 @@ public class DownloadBus {
     return enqueue(mDownloadDbHelper.insert(DownloadInfo.create(request, getTempPath(), UUID.randomUUID().toString())));
   }
 
+  public long enqueue(long id) {
+    Intent intent = getIntentService(id);
+    mContext.startService(intent);
+    get(id).onNext(new Info(Info.State.QUEUEING, 0, 0));
+    return id;
+  }
+
   public void error(long id, Throwable throwable) {
     get(id).onNext(new Info(Info.State.ERROR, throwable));
   }
@@ -158,13 +165,6 @@ public class DownloadBus {
     BehaviorSubject<Info> subject = get(id);
     subject.onCompleted();
     maps.remove(id);
-  }
-
-  private long enqueue(long id) {
-    Intent intent = getIntentService(id);
-    mContext.startService(intent);
-    get(id).onNext(new Info(Info.State.QUEUEING, 0, 0));
-    return id;
   }
 
   private BehaviorSubject<Info> get(long id) {

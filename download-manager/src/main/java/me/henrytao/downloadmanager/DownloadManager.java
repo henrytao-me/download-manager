@@ -62,6 +62,10 @@ public class DownloadManager {
     return mDownloadBus.getState(id);
   }
 
+  public void initialize() {
+    mDownloadBus.enqueue(0);
+  }
+
   public Observable<Info> observe(long id) {
     return mDownloadBus.observe(id);
   }
