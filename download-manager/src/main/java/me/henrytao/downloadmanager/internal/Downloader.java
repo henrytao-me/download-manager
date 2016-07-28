@@ -109,7 +109,7 @@ public class Downloader {
       while ((count = input.read(data)) != -1) {
         bytesRead += count;
         output.write(data, 0, count);
-        onDownloading(bytesRead, contentLength, bytesRead != contentLength);
+        onDownloading(bytesRead, contentLength);
         if (mIsInterrupted || mIsClosed) {
           break;
         }
@@ -184,9 +184,9 @@ public class Downloader {
     }
   }
 
-  private void onDownloading(long bytesRead, long contentLength, boolean done) {
+  private void onDownloading(long bytesRead, long contentLength) {
     if (mOnDownloadingListener != null) {
-      mOnDownloadingListener.onDownloading(bytesRead, contentLength, done);
+      mOnDownloadingListener.onDownloading(bytesRead, contentLength);
     }
   }
 
@@ -203,7 +203,7 @@ public class Downloader {
 
   public interface OnDownloadingListener {
 
-    void onDownloading(long bytesRead, long contentLength, boolean done);
+    void onDownloading(long bytesRead, long contentLength);
   }
 
   public interface OnStartDownloadListener {
