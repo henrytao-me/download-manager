@@ -48,7 +48,6 @@ public class DownloadService extends IntentService {
     setIntentRedelivery(true);
     mDownloadBus = DownloadBus.getInstance();
     mLogger = Logger.newInstance(DownloadManager.DEBUG ? Logger.LogLevel.VERBOSE : Logger.LogLevel.NONE);
-    //mLogger.d("onHandleIntent | initialized");
   }
 
   public DownloadService() {
@@ -59,6 +58,7 @@ public class DownloadService extends IntentService {
   public void onCreate() {
     super.onCreate();
     log("onCreate");
+
   }
 
   @Override

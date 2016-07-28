@@ -17,8 +17,8 @@
 package me.henrytao.downloadmanager.utils.rx;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.Stack;
+import java.util.concurrent.TimeUnit;
 
 import me.henrytao.downloadmanager.Info;
 import rx.Observable;
@@ -28,8 +28,9 @@ import rx.Observable;
  */
 public class RxUtils {
 
-  public static Observable.Transformer<List<Info>, List<Info>> distinctUntilChanged() {
+  public static Observable.Transformer<Info, Info> distinctInfoUntilChanged(int buffer) {
     return observable -> observable
+        .buffer(buffer, TimeUnit.MILLISECONDS)
         .map(infos -> {
           Stack<Info> stack = new Stack<>();
           for (Info info : infos) {
@@ -48,6 +49,7 @@ public class RxUtils {
             tmp[--n] = stack.pop();
           }
           return Arrays.asList(tmp);
-        });
+        })
+        .flatMapIterable(infos -> infos);
   }
 }

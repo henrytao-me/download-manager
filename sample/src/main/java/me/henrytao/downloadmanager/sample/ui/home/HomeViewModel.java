@@ -20,8 +20,6 @@ import android.content.Context;
 import android.databinding.ObservableField;
 import android.os.Environment;
 
-import java.util.concurrent.TimeUnit;
-
 import me.henrytao.downloadmanager.DownloadManager;
 import me.henrytao.downloadmanager.DownloadManager.Request;
 import me.henrytao.downloadmanager.sample.App;
@@ -75,10 +73,7 @@ public class HomeViewModel extends BaseViewModel {
 
   private void showProgress(long downloadId) {
     manageSubscription(mDownloadManager.observe(downloadId)
-        .distinctUntilChanged()
-        .buffer(300, TimeUnit.MILLISECONDS)
-        .compose(RxUtils.distinctUntilChanged())
-        .flatMapIterable(infos -> infos)
+        .compose(RxUtils.distinctInfoUntilChanged(300))
         .compose(Transformer.applyComputationScheduler())
         .subscribe(info -> {
           int percentage = info.contentLength > 0 ? (int) ((100 * info.bytesRead) / info.contentLength) : 0;

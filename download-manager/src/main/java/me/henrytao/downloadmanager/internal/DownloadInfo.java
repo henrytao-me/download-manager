@@ -34,7 +34,7 @@ public class DownloadInfo {
       return null;
     }
     return new DownloadInfo(0, request.getUri().toString(), request.getDestinationUri().toString(), request.getTitle(), 0,
-        tempPath.toString(), tempTitle, false);
+        tempPath.toString(), tempTitle, State.DOWNLOADING);
   }
 
   public static DownloadInfo create(Cursor cursor) {
@@ -43,6 +43,7 @@ public class DownloadInfo {
     }
     if (cursor.isBeforeFirst() && !cursor.moveToFirst()) {
       return null;
+
     }
     return new DownloadInfo(
         cursor.getLong(cursor.getColumnIndex(Fields._ID)),
@@ -52,7 +53,7 @@ public class DownloadInfo {
         cursor.getLong(cursor.getColumnIndex(Fields.CONTENT_LENGTH)),
         cursor.getString(cursor.getColumnIndex(Fields.TEMP_PATH)),
         cursor.getString(cursor.getColumnIndex(Fields.TEMP_TITLE)),
-        cursor.getInt(cursor.getColumnIndex(Fields.PAUSED)) == 1);
+        State.fromInt(cursor.getInt(cursor.getColumnIndex(Fields.STATE))));
   }
 
   private long mContentLength;
@@ -63,7 +64,7 @@ public class DownloadInfo {
 
   private long mId;
 
-  private boolean mIsPaused;
+  private State mState;
 
   private String mTempPath;
 
@@ -72,7 +73,7 @@ public class DownloadInfo {
   private String mUrl;
 
   protected DownloadInfo(long id, String url, String destPath, String destTitle, long contentLength, String tempPath, String tempTitle,
-      boolean isPaused) {
+      State state) {
     mId = id;
     mUrl = url;
     mDestPath = destPath;
@@ -80,7 +81,7 @@ public class DownloadInfo {
     mContentLength = contentLength;
     mTempPath = tempPath;
     mTempTitle = tempTitle;
-    mIsPaused = isPaused;
+    mState = state;
   }
 
   public long getContentLength() {
@@ -97,6 +98,10 @@ public class DownloadInfo {
 
   public long getId() {
     return mId;
+  }
+
+  public State getState() {
+    return mState;
   }
 
   public String getTempPath() {
@@ -122,8 +127,36 @@ public class DownloadInfo {
     values.put(Fields.CONTENT_LENGTH, mContentLength);
     values.put(Fields.TEMP_PATH, mTempPath);
     values.put(Fields.TEMP_TITLE, mTempTitle);
-    values.put(Fields.PAUSED, mIsPaused ? 1 : 0);
+    values.put(Fields.STATE, mState.toInt());
     return values;
+  }
+
+  public enum State {
+    UNKNOWN(0),
+    DOWNLOADED(1),
+    DOWNLOADING(2),
+    PAUSED(3);
+
+    public static State fromInt(int value) {
+      if (value == DOWNLOADED.toInt()) {
+        return DOWNLOADED;
+      } else if (value == DOWNLOADING.toInt()) {
+        return DOWNLOADING;
+      } else if (value == PAUSED.toInt()) {
+        return PAUSED;
+      }
+      return UNKNOWN;
+    }
+
+    private final int mValue;
+
+    State(int value) {
+      mValue = value;
+    }
+
+    public int toInt() {
+      return mValue;
+    }
   }
 
   public interface Fields {
@@ -131,7 +164,7 @@ public class DownloadInfo {
     String CONTENT_LENGTH = "content_length";
     String DEST_PATH = "dest_path";
     String DEST_TITLE = "dest_title";
-    String PAUSED = "paused";
+    String STATE = "state";
     String TEMP_PATH = "temp_path";
     String TEMP_TITLE = "temp_title";
     String URL = "url";

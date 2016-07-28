@@ -68,7 +68,7 @@ public class DownloadDbHelper extends SQLiteOpenHelper {
             DownloadInfo.Fields.CONTENT_LENGTH,
             DownloadInfo.Fields.TEMP_PATH,
             DownloadInfo.Fields.TEMP_TITLE,
-            DownloadInfo.Fields.PAUSED
+            DownloadInfo.Fields.STATE
         },
         DownloadInfo.Fields._ID + " = ?",
         new String[]{String.valueOf(downloadId)},
@@ -105,10 +105,10 @@ public class DownloadDbHelper extends SQLiteOpenHelper {
     db.close();
   }
 
-  public void updateState(long downloadId, boolean isPaused) {
+  public void updateState(long downloadId, DownloadInfo.State state) {
     SQLiteDatabase db = getWritableDatabase();
     ContentValues values = new ContentValues();
-    values.put(DownloadInfo.Fields.PAUSED, isPaused ? 1 : 0);
+    values.put(DownloadInfo.Fields.STATE, state.toInt());
     db.update(
         DownloadInfo.TABLE_NAME,
         values,
@@ -127,7 +127,7 @@ public class DownloadDbHelper extends SQLiteOpenHelper {
         + DownloadInfo.Fields.CONTENT_LENGTH + C_INTEGER + C_COMMA
         + DownloadInfo.Fields.TEMP_PATH + C_TEXT + C_COMMA
         + DownloadInfo.Fields.TEMP_TITLE + C_TEXT + C_COMMA
-        + DownloadInfo.Fields.PAUSED + C_INTEGER
+        + DownloadInfo.Fields.STATE + C_INTEGER
         + " )");
   }
 }

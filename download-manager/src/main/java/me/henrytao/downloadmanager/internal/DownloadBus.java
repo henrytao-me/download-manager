@@ -59,6 +59,10 @@ public class DownloadBus {
     get(id).onNext(new Info(Info.State.ERROR, throwable));
   }
 
+  public boolean exist(long id) {
+    return maps.containsKey(id);
+  }
+
   public void invalid(long id) {
     get(id).onNext(new Info(Info.State.INVALID, 0, 0));
   }

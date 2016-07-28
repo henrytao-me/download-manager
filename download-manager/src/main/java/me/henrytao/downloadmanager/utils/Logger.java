@@ -26,11 +26,15 @@ public final class Logger {
     return new Logger(DEFAULT_TAG, level);
   }
 
+  public static Logger newInstance(String tag, LogLevel logLevel) {
+    return new Logger(tag, logLevel);
+  }
+
   public final LogLevel mLogLevel;
 
   private final String mTag;
 
-  public Logger(String tag, LogLevel logLevel) {
+  protected Logger(String tag, LogLevel logLevel) {
     mTag = tag;
     mLogLevel = logLevel;
   }
