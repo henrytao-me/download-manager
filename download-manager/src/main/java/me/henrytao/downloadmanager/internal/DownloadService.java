@@ -92,7 +92,7 @@ public class DownloadService extends IntentService {
           (contentLength) -> onDownloaded(id, contentLength)
       );
       mSubscription = mDownloadBus
-          .observe(id)
+          .observe(id, true)
           .filter(info -> info.state == Info.State.PAUSED)
           .subscribe(info -> interrupt(id), Throwable::printStackTrace);
       try {

@@ -67,7 +67,11 @@ public class DownloadManager {
   }
 
   public Observable<Info> observe(long id) {
-    return mDownloadBus.observe(id);
+    return observe(id, false);
+  }
+
+  public Observable<Info> observe(long id, boolean shouldThrowError) {
+    return mDownloadBus.observe(id, shouldThrowError);
   }
 
   public void pause(long id) {

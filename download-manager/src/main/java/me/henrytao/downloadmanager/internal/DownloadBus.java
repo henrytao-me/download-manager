@@ -128,7 +128,7 @@ public class DownloadBus {
     get(id).onNext(new Info(Info.State.INVALID, 0, 0));
   }
 
-  public Observable<Info> observe(long id) {
+  public Observable<Info> observe(long id, boolean shouldThrowError) {
     return Observable.just((Info) null)
         .map(info -> {
           getState(id);
@@ -138,10 +138,11 @@ public class DownloadBus {
         .filter(info -> info != null)
         .flatMap(info -> {
           if (info.state == Info.State.ERROR) {
-            return Observable.error(info.getThrowable());
+            return shouldThrowError ? Observable.error(info.getThrowable()) : Observable.just(null);
           }
           return Observable.just(info);
-        });
+        })
+        .filter(info -> info != null);
   }
 
   public void pause(long id) {
