@@ -35,8 +35,8 @@ public class Info {
     this.contentLength = contentLength;
   }
 
-  public Info(State state, Throwable throwable) {
-    this(state, 0, 0);
+  public Info(State state, long bytesRead, long contentLength, Throwable throwable) {
+    this(state, bytesRead, contentLength);
     mThrowable = throwable;
   }
 
