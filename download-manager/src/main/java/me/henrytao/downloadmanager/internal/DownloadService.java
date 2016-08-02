@@ -84,18 +84,18 @@ public class DownloadService extends IntentService {
     if (downloadInfo == null) {
       mDownloadBus.invalid(id);
     } else if (downloadInfo.getState() == DownloadInfo.State.DOWNLOADING) {
-      mDownloader = Downloader.create(downloadInfo.getUrl(),
-          downloadInfo.getDestPath(), downloadInfo.getDestTitle(),
-          downloadInfo.getTempPath(), downloadInfo.getTempTitle(),
-          (bytesRead, contentLength) -> onStartDownload(id, bytesRead, contentLength),
-          (bytesRead, contentLength) -> onDownloading(id, bytesRead, contentLength),
-          (contentLength) -> onDownloaded(id, contentLength)
-      );
-      mSubscription = mDownloadBus
-          .observe(id, true)
-          .filter(info -> info.state == Info.State.PAUSED)
-          .subscribe(info -> interrupt(id), Throwable::printStackTrace);
       try {
+        mDownloader = Downloader.create(downloadInfo.getUrl(),
+            downloadInfo.getDestPath(), downloadInfo.getDestTitle(),
+            downloadInfo.getTempPath(), downloadInfo.getTempTitle(),
+            (bytesRead, contentLength) -> onStartDownload(id, bytesRead, contentLength),
+            (bytesRead, contentLength) -> onDownloading(id, bytesRead, contentLength),
+            (contentLength) -> onDownloaded(id, contentLength)
+        );
+        mSubscription = mDownloadBus
+            .observe(id, false)
+            .filter(info -> info.state == Info.State.PAUSED)
+            .subscribe(info -> interrupt(id), Throwable::printStackTrace);
         mDownloader.download();
       } catch (Exception exception) {
         onError(id, exception);

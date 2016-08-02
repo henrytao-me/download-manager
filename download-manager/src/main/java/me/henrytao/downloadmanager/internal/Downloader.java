@@ -105,14 +105,16 @@ public class Downloader {
       byte data[] = new byte[Constants.BUFFER_SIZE];
       int count;
 
-      onStartDownload(bytesRead, contentLength);
-      while ((count = input.read(data)) != -1) {
-        if (mIsInterrupted || mIsClosed) {
-          break;
+      if (!isCancelling()) {
+        onStartDownload(bytesRead, contentLength);
+        while ((count = input.read(data)) != -1) {
+          if (isCancelling()) {
+            break;
+          }
+          bytesRead += count;
+          output.write(data, 0, count);
+          onDownloading(bytesRead, contentLength);
         }
-        bytesRead += count;
-        output.write(data, 0, count);
-        onDownloading(bytesRead, contentLength);
       }
     } catch (IOException ex) {
       exception = ex;
@@ -174,6 +176,10 @@ public class Downloader {
 
   private File getTempFile() throws IllegalStateException {
     return FileUtils.getFile(mTempPath, mTempName);
+  }
+
+  private boolean isCancelling() {
+    return mIsInterrupted || mIsClosed;
   }
 
   private void onDownloaded(long contentLength) throws IOException {
