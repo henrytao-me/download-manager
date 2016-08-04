@@ -17,6 +17,7 @@
 package me.henrytao.downloadmanager.utils.rx;
 
 import rx.Subscriber;
+import rx.Subscription;
 
 /**
  * Created by henrytao on 4/15/16.
@@ -52,5 +53,11 @@ public class SubscriptionUtils {
 
   public static <T> void onNextAndComplete(Subscriber<T> subscriber) {
     onNextAndComplete(subscriber, null);
+  }
+
+  public static void unsubscribe(Subscription subscription) {
+    if (subscription != null && !subscription.isUnsubscribed()) {
+      subscription.unsubscribe();
+    }
   }
 }

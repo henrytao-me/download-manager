@@ -53,6 +53,7 @@ public class HomeViewModel extends BaseViewModel {
     super.onCreateView();
     mLogger = Logger.newInstance("application", DownloadManager.DEBUG ? Logger.LogLevel.VERBOSE : Logger.LogLevel.NONE);
     mDownloadManager = DownloadManager.getInstance(mContext);
+    mDownloadManager.initialize();
   }
 
   public void onDownloadClicked() {

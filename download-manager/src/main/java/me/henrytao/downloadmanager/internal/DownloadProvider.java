@@ -21,6 +21,8 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import android.net.Uri;
 
+import me.henrytao.downloadmanager.DownloadManager;
+
 /**
  * Created by henrytao on 7/25/16.
  */
@@ -43,7 +45,8 @@ public class DownloadProvider extends ContentProvider {
 
   @Override
   public boolean onCreate() {
-    return false;
+    DownloadManager.getInstance(getContext()).initialize();
+    return true;
   }
 
   @Override

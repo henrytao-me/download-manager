@@ -16,8 +16,6 @@
 
 package me.henrytao.downloadmanager;
 
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Locale;
@@ -36,8 +34,9 @@ public class ExampleUnitTest {
 
   @Test
   public void test() {
-    String test = "\"heldfdsfs\"";
-    assertThat(test.replaceAll("\"", ""), equalTo("heldfdsfs"));
+    String hello = "abc";
+    System.out.println(hello);
+    assertThat(hello == "abc", equalTo(true));
   }
 
   @Test

@@ -20,6 +20,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,7 @@ import java.util.UUID;
 
 import me.henrytao.downloadmanager.DownloadManager.Request;
 import me.henrytao.downloadmanager.Info;
+import me.henrytao.downloadmanager.utils.FileUtils;
 import rx.Observable;
 import rx.subjects.BehaviorSubject;
 
@@ -77,8 +79,17 @@ public class DownloadBus {
     return enqueue(mDownloadDbHelper.insert(DownloadInfo.create(request, getTempPath(), UUID.randomUUID().toString())));
   }
 
+  public long enqueue(long id) {
+    Intent intent = getIntentService(id);
+    mContext.startService(intent);
+    Info info = getLatestInfo(id);
+    get(id).onNext(new Info(Info.State.QUEUEING, info.bytesRead, info.contentLength));
+    return id;
+  }
+
   public void error(long id, Throwable throwable) {
-    get(id).onNext(new Info(Info.State.ERROR, throwable));
+    Info info = getLatestInfo(id);
+    get(id).onNext(new Info(Info.State.ERROR, info.bytesRead, info.contentLength, throwable));
   }
 
   public Intent getIntentService(long id) {
@@ -87,27 +98,8 @@ public class DownloadBus {
     return intent;
   }
 
-  public synchronized Info.State getState(long id) {
-    BehaviorSubject<Info> subject = get(id);
-    if (!subject.hasValue()) {
-      DownloadInfo downloadInfo = mDownloadDbHelper.find(id);
-      if (downloadInfo != null) {
-        switch (downloadInfo.getState()) {
-          case DOWNLOADED:
-            subject.onNext(new Info(Info.State.DOWNLOADED, downloadInfo.getContentLength(), downloadInfo.getContentLength()));
-            break;
-          case PAUSED:
-            subject.onNext(new Info(Info.State.PAUSED, 0, 0));
-            break;
-          default:
-            subject.onNext(new Info(Info.State.QUEUEING, 0, 0));
-            break;
-        }
-      } else {
-        subject.onNext(new Info(Info.State.INVALID, 0, 0));
-      }
-    }
-    return subject.getValue().state;
+  public Info.State getState(long id) {
+    return getLatestInfo(id).state;
   }
 
   public void initialize() {
@@ -121,7 +113,7 @@ public class DownloadBus {
     get(id).onNext(new Info(Info.State.INVALID, 0, 0));
   }
 
-  public Observable<Info> observe(long id) {
+  public Observable<Info> observe(long id, boolean shouldThrowError) {
     return Observable.just((Info) null)
         .map(info -> {
           getState(id);
@@ -131,22 +123,25 @@ public class DownloadBus {
         .filter(info -> info != null)
         .flatMap(info -> {
           if (info.state == Info.State.ERROR) {
-            return Observable.error(info.getThrowable());
+            return shouldThrowError ? Observable.error(info.getThrowable()) : Observable.just(null);
           }
           return Observable.just(info);
-        });
+        })
+        .filter(info -> info != null);
   }
 
   public void pause(long id) {
     if (mDownloadDbHelper.updateState(id, DownloadInfo.State.PAUSED)) {
-      get(id).onNext(new Info(Info.State.PAUSED, 0, 0));
+      Info info = getLatestInfo(id);
+      get(id).onNext(new Info(Info.State.PAUSED, info.bytesRead, info.contentLength));
     }
   }
 
   public void resume(long id) {
     if (mDownloadDbHelper.updateState(id, DownloadInfo.State.DOWNLOADING)) {
       enqueue(id);
-      get(id).onNext(new Info(Info.State.RESUMED, 0, 0));
+      Info info = getLatestInfo(id);
+      get(id).onNext(new Info(Info.State.RESUMED, info.bytesRead, info.contentLength));
     }
   }
 
@@ -160,18 +155,36 @@ public class DownloadBus {
     maps.remove(id);
   }
 
-  private long enqueue(long id) {
-    Intent intent = getIntentService(id);
-    mContext.startService(intent);
-    get(id).onNext(new Info(Info.State.QUEUEING, 0, 0));
-    return id;
-  }
-
   private BehaviorSubject<Info> get(long id) {
     if (!maps.containsKey(id)) {
       maps.put(id, BehaviorSubject.create());
     }
     return maps.get(id);
+  }
+
+  private synchronized Info getLatestInfo(long id) {
+    BehaviorSubject<Info> subject = get(id);
+    if (!subject.hasValue()) {
+      DownloadInfo downloadInfo = mDownloadDbHelper.find(id);
+      if (downloadInfo != null) {
+        File tempFile = FileUtils.getFile(downloadInfo.getTempPath(), downloadInfo.getTempTitle());
+        long bytesRead = tempFile != null && tempFile.exists() ? tempFile.length() : 0;
+        switch (downloadInfo.getState()) {
+          case DOWNLOADED:
+            subject.onNext(new Info(Info.State.DOWNLOADED, downloadInfo.getContentLength(), downloadInfo.getContentLength()));
+            break;
+          case PAUSED:
+            subject.onNext(new Info(Info.State.PAUSED, bytesRead, downloadInfo.getContentLength()));
+            break;
+          default:
+            subject.onNext(new Info(Info.State.QUEUEING, bytesRead, downloadInfo.getContentLength()));
+            break;
+        }
+      } else {
+        subject.onNext(new Info(Info.State.INVALID, 0, 0));
+      }
+    }
+    return subject.getValue();
   }
 
   private Uri getTempPath() {
