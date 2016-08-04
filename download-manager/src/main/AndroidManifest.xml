@@ -37,7 +37,7 @@
       android:name=".internal.DownloadService" />
 
     <provider
-      android:authorities="${packageName}.internal.DownloadProvider"
+      android:authorities="@string/download_manager_authority"
       android:enabled="true"
       android:exported="false"
       android:name=".internal.DownloadProvider" />

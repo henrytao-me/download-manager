@@ -33,6 +33,7 @@ android {
     versionCode rootProject.ext.android.versionCode
     versionName rootProject.ext.android.versionName
     consumerProguardFiles "proguard-rules.pro"
+    resValue "string", "download_manager_authority", UUID.randomUUID().toString().replaceAll("-", "")
   }
 
   buildTypes {
