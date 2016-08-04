@@ -16,17 +16,11 @@
 
 package me.henrytao.downloadmanager.internal;
 
-import android.app.AlarmManager;
 import android.app.IntentService;
-import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
-
-import java.util.Locale;
 
 import me.henrytao.downloadmanager.DownloadManager;
 import me.henrytao.downloadmanager.Info;
-import me.henrytao.downloadmanager.config.Constants;
 import me.henrytao.downloadmanager.utils.Logger;
 import rx.Subscription;
 
@@ -49,7 +43,8 @@ public class DownloadService extends IntentService {
     super(name);
     setIntentRedelivery(true);
     mDownloadBus = DownloadBus.getInstance(this);
-    mLogger = Logger.newInstance(DownloadManager.DEBUG ? Logger.LogLevel.VERBOSE : Logger.LogLevel.NONE);
+    mLogger = Logger.newInstance(DownloadService.class.getSimpleName(),
+        DownloadManager.DEBUG ? Logger.LogLevel.VERBOSE : Logger.LogLevel.NONE);
   }
 
   public DownloadService() {
@@ -59,26 +54,26 @@ public class DownloadService extends IntentService {
   @Override
   public void onCreate() {
     super.onCreate();
-    log("onCreate");
+    mLogger.d("onCreate");
     mDownloadBus.initialize();
   }
 
   @Override
   public void onDestroy() {
     super.onDestroy();
-    log("onDestroy");
+    mLogger.d("onDestroy");
   }
 
   @Override
   public void onTaskRemoved(Intent rootIntent) {
     super.onTaskRemoved(rootIntent);
-    log("onTaskRemoved");
+    mLogger.d("onTaskRemoved");
   }
 
   @Override
   protected void onHandleIntent(Intent intent) {
     final long id = intent.getLongExtra(EXTRA_DOWNLOAD_ID, 0);
-    log("onHandleIntent | %d", id);
+    mLogger.d("onHandleIntent | %d", id);
     reset();
     DownloadInfo downloadInfo = DownloadDbHelper.create(this).find(id);
     if (downloadInfo == null) {
@@ -115,10 +110,6 @@ public class DownloadService extends IntentService {
     return mDownloader != null && mDownloader.isInterrupted();
   }
 
-  private void log(String value, Object... args) {
-    mLogger.d(String.format(Locale.US, "%s | %s", DownloadService.class.getSimpleName(), String.format(Locale.US, value, args)));
-  }
-
   private void onDownloaded(long id, long contentLength) {
     mDownloadBus.downloaded(id, contentLength);
   }
@@ -128,7 +119,7 @@ public class DownloadService extends IntentService {
       return;
     }
     int percentage = (int) ((100 * bytesRead) / contentLength);
-    log("onDownloading: %d/100", percentage);
+    mLogger.d("onDownloading: %d/100", percentage);
     mDownloadBus.downloading(id, bytesRead, contentLength);
   }
 
@@ -142,15 +133,13 @@ public class DownloadService extends IntentService {
       return;
     }
     DownloadDbHelper.create(this).updateContentLength(id, contentLength);
-    log("onStartDownload: %d of %d", bytesRead, contentLength);
+    mLogger.d("onStartDownload: %d of %d", bytesRead, contentLength);
     mDownloadBus.started(id, bytesRead, contentLength);
   }
 
   private void reschedule(long id) {
-    // TODO: exponential back off here
-    AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-    PendingIntent alarmIntent = PendingIntent.getService(this, 0, mDownloadBus.getIntentService(id), 0);
-    alarmManager.set(AlarmManager.RTC_WAKEUP, Constants.Scheduler.WAKE_UP, alarmIntent);
+    Intent intent = new Intent(this, DownloadManagerService.class);
+    startService(intent);
   }
 
   private void reset() {
