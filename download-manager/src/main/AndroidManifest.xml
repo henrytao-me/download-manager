@@ -27,13 +27,25 @@
 
   <application>
     <service
+      android:enabled="true"
       android:exported="false"
-      android:name=".internal.DownloadManagerService">
+      android:name=".internal.DownloadManagerService" />
+
+    <service
+      android:enabled="true"
+      android:exported="false"
+      android:name=".internal.DownloadService" />
+
+    <provider
+      android:authorities="me.henrytao.downloadmanager.internal.DownloadProvider"
+      android:enabled="true"
+      android:exported="false"
+      android:name=".internal.DownloadProvider" />
+
+    <receiver android:name=".internal.AutoStartBroadcastReceiver">
       <intent-filter>
         <action android:name="android.intent.action.BOOT_COMPLETED" />
       </intent-filter>
-    </service>
-
-    <service android:name=".internal.DownloadService" />
+    </receiver>
   </application>
 </manifest>
