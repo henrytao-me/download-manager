@@ -111,6 +111,7 @@ public class DownloadService extends IntentService {
   }
 
   private void onDownloaded(long id, long contentLength) {
+    mLogger.d("onDownloaded: %d | %d", id, contentLength);
     mDownloadBus.downloaded(id, contentLength);
   }
 
@@ -119,11 +120,12 @@ public class DownloadService extends IntentService {
       return;
     }
     int percentage = (int) ((100 * bytesRead) / contentLength);
-    mLogger.d("onDownloading: %d/100", percentage);
+    mLogger.v("onDownloading: %d/100", percentage);
     mDownloadBus.downloading(id, bytesRead, contentLength);
   }
 
   private void onError(long id, Throwable throwable) {
+    mLogger.d("onError: %d", id);
     mDownloadBus.error(id, throwable);
     reschedule(id);
   }
@@ -133,7 +135,7 @@ public class DownloadService extends IntentService {
       return;
     }
     DownloadDbHelper.create(this).updateContentLength(id, contentLength);
-    mLogger.d("onStartDownload: %d of %d", bytesRead, contentLength);
+    mLogger.v("onStartDownload: %d of %d", bytesRead, contentLength);
     mDownloadBus.started(id, bytesRead, contentLength);
   }
 
