@@ -87,6 +87,11 @@ public class DownloadBus {
     return id;
   }
 
+  public long enqueueButPause(Request request) {
+    request.validate();
+    return mDownloadDbHelper.insert(DownloadInfo.create(request, getTempPath(), UUID.randomUUID().toString()));
+  }
+
   public void error(long id, Throwable throwable) {
     Info info = getLatestInfo(id);
     get(id).onNext(new Info(Info.State.ERROR, info.bytesRead, info.contentLength, throwable));
