@@ -75,8 +75,7 @@ public class DownloadBus {
   }
 
   public long enqueue(Request request) {
-    request.validate();
-    return enqueue(mDownloadDbHelper.insert(DownloadInfo.create(request, getTempPath(), UUID.randomUUID().toString())));
+    return enqueue(request, true);
   }
 
   public long enqueue(long id) {
@@ -87,9 +86,15 @@ public class DownloadBus {
     return id;
   }
 
-  public long enqueueButPause(Request request) {
+  public long enqueue(Request request, boolean shouldStartNow) {
     request.validate();
-    return mDownloadDbHelper.insert(DownloadInfo.create(request, getTempPath(), UUID.randomUUID().toString()));
+    long id = mDownloadDbHelper.insert(DownloadInfo.create(request, getTempPath(), UUID.randomUUID().toString()));
+    if (!shouldStartNow) {
+      mDownloadDbHelper.updateState(id, DownloadInfo.State.PAUSED);
+    } else {
+      enqueue(id);
+    }
+    return id;
   }
 
   public void error(long id, Throwable throwable) {
