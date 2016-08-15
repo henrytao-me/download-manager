@@ -58,6 +58,10 @@ public class DownloadManager {
     return mDownloadBus.enqueue(request);
   }
 
+  public long enqueue(Request request, boolean shouldStartNow) {
+    return mDownloadBus.enqueue(request, shouldStartNow);
+  } 
+
   public Info.State getState(long id) {
     return mDownloadBus.getState(id);
   }

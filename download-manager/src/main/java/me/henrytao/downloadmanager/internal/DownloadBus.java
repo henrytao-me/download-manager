@@ -75,8 +75,7 @@ public class DownloadBus {
   }
 
   public long enqueue(Request request) {
-    request.validate();
-    return enqueue(mDownloadDbHelper.insert(DownloadInfo.create(request, getTempPath(), UUID.randomUUID().toString())));
+    return enqueue(request, true);
   }
 
   public long enqueue(long id) {
@@ -84,6 +83,17 @@ public class DownloadBus {
     mContext.startService(intent);
     Info info = getLatestInfo(id);
     get(id).onNext(new Info(Info.State.QUEUEING, info.bytesRead, info.contentLength));
+    return id;
+  }
+
+  public long enqueue(Request request, boolean shouldStartNow) {
+    request.validate();
+    long id = mDownloadDbHelper.insert(DownloadInfo.create(request, getTempPath(), UUID.randomUUID().toString()));
+    if (!shouldStartNow) {
+      mDownloadDbHelper.updateState(id, DownloadInfo.State.PAUSED);
+    } else {
+      enqueue(id);
+    }
     return id;
   }
 
