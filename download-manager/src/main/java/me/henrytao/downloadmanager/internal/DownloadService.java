@@ -72,10 +72,10 @@ public class DownloadService extends IntentService {
 
   @Override
   protected void onHandleIntent(Intent intent) {
-    final long id = intent.getLongExtra(EXTRA_DOWNLOAD_ID, 0);
+    final long id = intent != null ? intent.getLongExtra(EXTRA_DOWNLOAD_ID, 0) : 0;
     mLogger.d("onHandleIntent | %d", id);
     reset();
-    DownloadInfo downloadInfo = DownloadDbHelper.create(this).find(id);
+    DownloadInfo downloadInfo = DownloadDbHelper.getInstance(this).find(id);
     if (downloadInfo == null) {
       mDownloadBus.invalid(id);
     } else if (downloadInfo.getState() == DownloadInfo.State.DOWNLOADING) {
@@ -134,7 +134,7 @@ public class DownloadService extends IntentService {
     if (isInterrupted()) {
       return;
     }
-    DownloadDbHelper.create(this).updateContentLength(id, contentLength);
+    DownloadDbHelper.getInstance(this).updateContentLength(id, contentLength);
     mLogger.v("onStartDownload: %d of %d", bytesRead, contentLength);
     mDownloadBus.started(id, bytesRead, contentLength);
   }

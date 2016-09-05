@@ -40,8 +40,17 @@ public class DownloadDbHelper extends SQLiteOpenHelper {
 
   private static final String C_TEXT = " TEXT ";
 
-  public static DownloadDbHelper create(Context context) {
-    return new DownloadDbHelper(context);
+  private static DownloadDbHelper sDownloadDbHelper;
+
+  public static DownloadDbHelper getInstance(Context context) {
+    if (sDownloadDbHelper == null) {
+      synchronized (DownloadDbHelper.class) {
+        if (sDownloadDbHelper == null) {
+          sDownloadDbHelper = new DownloadDbHelper(context);
+        }
+      }
+    }
+    return sDownloadDbHelper;
   }
 
   protected DownloadDbHelper(Context context) {

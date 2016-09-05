@@ -60,7 +60,7 @@ public class DownloadBus {
 
   public DownloadBus(Context context) {
     mContext = context.getApplicationContext();
-    mDownloadDbHelper = DownloadDbHelper.create(mContext);
+    mDownloadDbHelper = DownloadDbHelper.getInstance(mContext);
   }
 
   public void downloaded(long id, long contentLength) {
