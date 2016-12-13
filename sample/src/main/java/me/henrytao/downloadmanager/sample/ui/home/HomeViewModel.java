@@ -21,7 +21,6 @@ import com.google.firebase.database.FirebaseDatabase;
 
 import com.evernote.android.job.Job;
 import com.evernote.android.job.JobCreator;
-import com.evernote.android.job.JobManager;
 import com.evernote.android.job.JobRequest;
 
 import android.content.Context;

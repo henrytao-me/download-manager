@@ -53,9 +53,10 @@ dependencies {
 
   compile rootProject.ext.dependencies["com.android.support:support-v4"]
 
+  compile rootProject.ext.dependencies["com.evernote:android-job"]
+
   compile rootProject.ext.dependencies["com.squareup.okhttp3:okhttp"]
 
-  compile rootProject.ext.dependencies["io.reactivex:rxandroid"]
   compile rootProject.ext.dependencies["io.reactivex:rxjava"]
 
   testCompile rootProject.ext.sampleDependencies["junit:junit"]

@@ -16,9 +16,11 @@
 
 package me.henrytao.downloadmanager;
 
-import android.annotation.SuppressLint;
+import com.evernote.android.job.JobManager;
+
 import android.content.Context;
 
+import me.henrytao.downloadmanager.internal.Downloader;
 import me.henrytao.downloadmanager.internal.Logger;
 import me.henrytao.downloadmanager.internal.Storage;
 
@@ -30,7 +32,6 @@ public final class DownloadManager {
 
   public static boolean DEBUG = false;
 
-  @SuppressLint("StaticFieldLeak")
   private static volatile DownloadManager sInstance;
 
   public static DownloadManager create(Context context) {
@@ -55,33 +56,32 @@ public final class DownloadManager {
     return sInstance;
   }
 
-  private final Context mContext;
-
   private final Logger mLogger;
 
   private final Storage mStorage;
 
   private DownloadManager(Context context) {
-    mContext = context.getApplicationContext();
+    context = context.getApplicationContext();
     mLogger = Logger.newInstance(getClass().getSimpleName(), DEBUG ? Logger.LogLevel.VERBOSE : Logger.LogLevel.NONE);
-    mStorage = new Storage(mContext);
+    mStorage = new Storage(context);
+    JobManager.create(context).addJobCreator(new Downloader.JobCreator());
+  }
+
+  public void download(long id) {
+
   }
 
   public long enqueue(Request request) {
     if (request.isEnqueued()) {
       return request.getId();
     }
-    long id = mStorage.getNextTaskId();
-    request.setId(id);
+    request.setId(mStorage.getNextTaskId());
     mStorage.enqueue(request);
-    return id;
+    Downloader.Job.create(request.getId()).schedule();
+    return request.getId();
   }
 
   public Logger getLogger() {
     return mLogger;
-  }
-
-  public Storage getStorage() {
-    return mStorage;
   }
 }

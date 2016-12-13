@@ -47,7 +47,7 @@ public final class Request {
 
   private long mId;
 
-  private Request(String tag, Uri uri, String title, String description, Uri destUri, Uri tempUri, int retry) {
+  private Request(Uri uri, String tag, String title, String description, Uri destUri, Uri tempUri, int retry) {
     mId = -1;
     mTag = tag;
     mUri = uri;
@@ -104,7 +104,7 @@ public final class Request {
     return result;
   }
 
-  public int enqueue() {
+  public long enqueue() {
     return DownloadManager.getInstance().enqueue(this);
   }
 
@@ -150,7 +150,7 @@ public final class Request {
 
   public static final class Builder {
 
-    private final String mTag;
+    private final Uri mUri;
 
     private String mDescription;
 
@@ -162,6 +162,8 @@ public final class Request {
 
     private int mRetry;
 
+    private String mTag;
+
     private String mTempFilename;
 
     private Uri mTempPath;
@@ -170,20 +172,17 @@ public final class Request {
 
     private String mTitle;
 
-    private Uri mUri;
-
-    public Builder(@NonNull String tag) {
-      mTag = tag;
+    public Builder(@NonNull Uri uri) {
+      mUri = uri;
       mRetry = DEFAULT_RETRY;
     }
 
     public Request build() {
-      mUri = Precondition.checkNotNull(mUri);
       mDestFilename = Precondition.checkNotEmpty(mDestFilename, mUri.getPath());
       mTempFilename = Precondition.checkNotEmpty(mTempFilename, UUID.randomUUID().toString());
       return new Request(
-          Precondition.checkNotEmpty(mTag),
           Precondition.checkNotNull(mUri),
+          mTag,
           mTitle,
           mDescription,
           Precondition.checkNotNull(mDestUri, Uri.withAppendedPath(Precondition.checkNotNull(mDestPath), mDestFilename)),
@@ -217,6 +216,10 @@ public final class Request {
       return this;
     }
 
+    public void setTag(String tag) {
+      mTag = tag;
+    }
+
     public Builder setTempFilename(String tempFilename) {
       mTempFilename = tempFilename;
       return this;
@@ -234,11 +237,6 @@ public final class Request {
 
     public Builder setTitle(String title) {
       mTitle = title;
-      return this;
-    }
-
-    public Builder setUri(Uri uri) {
-      mUri = uri;
       return this;
     }
   }
