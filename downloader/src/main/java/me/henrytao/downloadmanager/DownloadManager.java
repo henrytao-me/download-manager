@@ -16,13 +16,12 @@
 
 package me.henrytao.downloadmanager;
 
-import com.evernote.android.job.JobManager;
-
 import android.content.Context;
 
 import me.henrytao.downloadmanager.internal.Downloader;
 import me.henrytao.downloadmanager.internal.Logger;
 import me.henrytao.downloadmanager.internal.Storage;
+import me.henrytao.downloadmanager.internal.Task;
 
 /**
  * Created by henrytao on 12/12/16.
@@ -56,6 +55,8 @@ public final class DownloadManager {
     return sInstance;
   }
 
+  private final Downloader mDownloader;
+
   private final Logger mLogger;
 
   private final Storage mStorage;
@@ -64,10 +65,14 @@ public final class DownloadManager {
     context = context.getApplicationContext();
     mLogger = Logger.newInstance(getClass().getSimpleName(), DEBUG ? Logger.LogLevel.VERBOSE : Logger.LogLevel.NONE);
     mStorage = new Storage(context);
-    JobManager.create(context).addJobCreator(new Downloader.JobCreator());
+    mDownloader = new Downloader(context);
   }
 
   public void download(long id) {
+    Task task = mStorage.find(id);
+    if (task == null) {
+      return;
+    }
 
   }
 
@@ -77,7 +82,7 @@ public final class DownloadManager {
     }
     request.setId(mStorage.getNextTaskId());
     mStorage.enqueue(request);
-    Downloader.Job.create(request.getId()).schedule();
+    mDownloader.enqueue(request);
     return request.getId();
   }
 

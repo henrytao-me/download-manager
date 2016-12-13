@@ -68,6 +68,10 @@ public class Storage {
     }
   }
 
+  public synchronized Task find(long id) {
+    return mTaskCache.get(id);
+  }
+
   @SuppressLint("CommitPrefEdits")
   public synchronized long getNextTaskId() {
     long id = mTaskCounter.incrementAndGet();

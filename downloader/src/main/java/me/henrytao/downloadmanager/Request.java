@@ -182,7 +182,7 @@ public final class Request {
       mTempFilename = Precondition.checkNotEmpty(mTempFilename, UUID.randomUUID().toString());
       return new Request(
           Precondition.checkNotNull(mUri),
-          mTag,
+          Precondition.checkNotEmpty(mTag, ""),
           mTitle,
           mDescription,
           Precondition.checkNotNull(mDestUri, Uri.withAppendedPath(Precondition.checkNotNull(mDestPath), mDestFilename)),

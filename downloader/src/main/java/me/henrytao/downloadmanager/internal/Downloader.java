@@ -16,14 +16,17 @@
 
 package me.henrytao.downloadmanager.internal;
 
+import com.evernote.android.job.JobManager;
 import com.evernote.android.job.JobRequest;
 import com.evernote.android.job.util.support.PersistableBundleCompat;
 
+import android.content.Context;
 import android.support.annotation.NonNull;
 
 import java.util.concurrent.TimeUnit;
 
 import me.henrytao.downloadmanager.DownloadManager;
+import me.henrytao.downloadmanager.Request;
 
 /**
  * Created by henrytao on 12/13/16.
@@ -31,13 +34,21 @@ import me.henrytao.downloadmanager.DownloadManager;
 
 public final class Downloader {
 
-  public static final class Job extends com.evernote.android.job.Job {
+  public Downloader(Context context) {
+    JobManager.create(context.getApplicationContext()).addJobCreator(new Downloader.JobCreator());
+  }
 
-    public static final String TAG = "DOWNLOAD_JOB";
+  public void enqueue(Request request) {
+    Job.create(request.getId()).schedule();
+  }
+
+  private static final class Job extends com.evernote.android.job.Job {
 
     private static final String EXTRA_ID = "EXTRA_ID";
 
-    public static JobRequest create(long id) {
+    private static final String TAG = "DOWNLOADER";
+
+    private static JobRequest create(long id) {
       PersistableBundleCompat bundle = new PersistableBundleCompat();
       bundle.putLong(EXTRA_ID, id);
       return new JobRequest.Builder(TAG)
@@ -62,7 +73,7 @@ public final class Downloader {
     }
   }
 
-  public static final class JobCreator implements com.evernote.android.job.JobCreator {
+  private static final class JobCreator implements com.evernote.android.job.JobCreator {
 
     @Override
     public com.evernote.android.job.Job create(String tag) {
