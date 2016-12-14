@@ -42,12 +42,11 @@ public class ExampleUnitTest {
     System.out.println(String.format(Locale.US, "output | %d", value.get()));
     int test = value.incrementAndGet();
     System.out.println(String.format(Locale.US, "output | %d", test));
+  }
 
-    try {
-      throw new RuntimeException("hello exception");
-    } finally {
-      System.out.println("exception");
-    }
+  @Test
+  public void testRxJava() {
+
   }
 
   @Test

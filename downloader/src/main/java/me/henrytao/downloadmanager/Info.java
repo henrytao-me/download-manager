@@ -18,61 +18,45 @@ package me.henrytao.downloadmanager;
 
 import android.util.SparseArray;
 
+import me.henrytao.downloadmanager.internal.Task;
+
 /**
  * Created by henrytao on 7/27/16.
  */
-public final class Info {
+public final class Info extends Task {
 
-  public final long bytesRead;
-
-  public final long contentLength;
-
-  public final State state;
-
-  private Throwable mThrowable;
-
-  public Info(State state, long bytesRead, long contentLength) {
-    this(state, bytesRead, contentLength, null);
+  public static Info create(Task task, long bytesRead, Status status) {
+    if (task == null) {
+      return null;
+    }
+    return new Info(task, bytesRead, status);
   }
 
-  public Info(State state, long bytesRead, long contentLength, Throwable throwable) {
-    this.state = state;
+  private final long bytesRead;
+
+  private final Status status;
+
+  protected Info(Task task, long bytesRead, Status status) {
+    super(task.getId(), task.getTag(), task.getUri(), task.getTitle(), task.getDescription(), task.getDestUri(), task.getTempUri(),
+        task.getMaxRetry(), task.getRetryCount(), task.getState(), task.getContentLength(), task.getMd5());
     this.bytesRead = bytesRead;
-    this.contentLength = contentLength;
-    mThrowable = throwable;
+    this.status = status;
   }
 
   @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    Info info = (Info) o;
-    if (bytesRead != info.bytesRead) {
-      return false;
-    }
-    if (contentLength != info.contentLength) {
-      return false;
-    }
-    return state == info.state;
+  public long getBytesRead() {
+    return getBytesRead(false);
   }
 
-  @Override
-  public int hashCode() {
-    int result = (int) (bytesRead ^ (bytesRead >>> 32));
-    result = 31 * result + (int) (contentLength ^ (contentLength >>> 32));
-    result = 31 * result + state.hashCode();
-    return result;
+  public long getBytesRead(boolean force) {
+    return force || bytesRead == 0 ? super.getBytesRead() : bytesRead;
   }
 
-  public Throwable getThrowable() {
-    return mThrowable;
+  public Status getStatus() {
+    return status;
   }
 
-  public enum State {
+  public enum Status {
     NONE(0),
     QUEUEING(1),
     DOWNLOADING(2),
@@ -82,21 +66,21 @@ public final class Info {
     FAILED(6),
     SUCCEED(7);
 
-    private static SparseArray<State> sCaches = new SparseArray<>();
+    private static SparseArray<Status> sCaches = new SparseArray<>();
 
     static {
-      for (State value : State.values()) {
+      for (Status value : Status.values()) {
         sCaches.put(value.toInt(), value);
       }
     }
 
-    public static State from(int value) {
+    public static Status from(int value) {
       return sCaches.get(value, NONE);
     }
 
     private final int mValue;
 
-    State(int value) {
+    Status(int value) {
       mValue = value;
     }
 

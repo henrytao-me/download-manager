@@ -55,6 +55,8 @@ public class Downloader {
       return;
     }
 
+    mBus.queueing(task.getId());
+
     ResponseInfo response = null;
     InputStream input = null;
     OutputStream output = null;
@@ -65,7 +67,7 @@ public class Downloader {
       if (bytesRead == 0) {
         mStorage.update(task.getId(), response.contentLength, response.md5);
       }
-      downloading(task.getId(), bytesRead);
+      mBus.downloading(task.getId(), bytesRead);
 
       input = response.response.body().byteStream();
       output = new FileOutputStream(response.file, bytesRead != 0);
@@ -75,7 +77,7 @@ public class Downloader {
         while ((count = input.read(data)) != -1) {
           bytesRead += count;
           output.write(data, 0, count);
-          downloading(task.getId(), bytesRead);
+          mBus.downloading(task.getId(), bytesRead);
           if (isCanceled(task.getId())) {
             break;
           }
@@ -100,19 +102,22 @@ public class Downloader {
     }
 
     if (!isCanceled(task.getId())) {
+      mBus.downloaded(task.getId());
       // get latest task info
       task = mStorage.find(task.getId());
+      mBus.validating(task.getId());
       if (FileUtils.matchMd5(task.getTempFile(), task.getMd5())) {
         FileUtils.move(task.getTempFile(), task.getDestFile());
+        mStorage.update(task.getId(), Task.State.SUCCESS);
+        mBus.succeed(task.getId());
       } else {
         FileUtils.delete(task.getTempFile());
+        mBus.failed(task.getId());
         throw new IllegalStateException(String.format(Locale.US, "Mismatch md5 for task %d", task.getId()));
       }
+    } else {
+      mBus.pausing(task.getId());
     }
-  }
-
-  private void downloading(long id, long bytesRead) {
-    mBus.downloading(id, bytesRead);
   }
 
   private ResponseInfo initResponse(Task task) throws IOException {

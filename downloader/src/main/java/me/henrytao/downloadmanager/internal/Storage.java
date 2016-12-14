@@ -90,13 +90,21 @@ public class Storage {
   }
 
   public synchronized void increaseRetryCount(long id) {
-    mDbHelper.increaseRetryCount(id);
-    updateCache(id);
+    if (mDbHelper.increaseRetryCount(id)) {
+      updateCache(id);
+    }
   }
 
   public void update(long id, long contentLength, String md5) {
-    mDbHelper.update(id, contentLength, md5);
-    updateCache(id);
+    if (mDbHelper.update(id, contentLength, md5)) {
+      updateCache(id);
+    }
+  }
+
+  public void update(long id, Task.State state) {
+    if (mDbHelper.update(id, state)) {
+      updateCache(id);
+    }
   }
 
   private void addToCache(@NonNull Task task) {
@@ -198,6 +206,18 @@ public class Storage {
         db().delete(Task.NAME, Task.Fields.ID + " = ?", new String[]{String.valueOf(id)});
       } catch (Exception e) {
         log().e(e, "Could not delete task %d", id);
+        return false;
+      }
+      return true;
+    }
+
+    boolean update(long id, Task.State state) {
+      try {
+        ContentValues values = new ContentValues();
+        values.put(Task.Fields.STATE, state.toInt());
+        db().update(Task.NAME, values, Task.Fields.ID + " = ?", new String[]{String.valueOf(id)});
+      } catch (Exception e) {
+        log().e(e, "Could not update state of id %d", id);
         return false;
       }
       return true;

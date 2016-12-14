@@ -25,6 +25,7 @@ import me.henrytao.downloadmanager.internal.Downloader;
 import me.henrytao.downloadmanager.internal.JobService;
 import me.henrytao.downloadmanager.internal.Logger;
 import me.henrytao.downloadmanager.internal.Storage;
+import rx.Observable;
 
 /**
  * Created by henrytao on 12/12/16.
@@ -71,9 +72,9 @@ public final class DownloadManager {
   private DownloadManager(Context context) {
     context = context.getApplicationContext();
     mLogger = Logger.newInstance(getClass().getSimpleName(), DEBUG ? Logger.LogLevel.VERBOSE : Logger.LogLevel.NONE);
-    mBus = new Bus();
-    mStorage = new Storage(context);
     mJobService = new JobService(context);
+    mStorage = new Storage(context);
+    mBus = new Bus(mStorage);
     mDownloader = new Downloader(mStorage, mBus);
   }
 
@@ -93,5 +94,9 @@ public final class DownloadManager {
 
   public Logger getLogger() {
     return mLogger;
+  }
+
+  public Observable<Info> observe(long id) {
+    return mBus.observe(id);
   }
 }
