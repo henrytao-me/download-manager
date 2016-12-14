@@ -17,11 +17,13 @@
 package me.henrytao.downloadmanager.internal;
 
 import android.annotation.SuppressLint;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.support.annotation.NonNull;
 import android.support.v4.util.LruCache;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -87,8 +89,23 @@ public class Storage {
     return id;
   }
 
-  private void addToCache(Task task) {
+  public synchronized void increaseRetryCount(long id) {
+    mDbHelper.increaseRetryCount(id);
+    updateCache(id);
+  }
+
+  public void update(long id, long contentLength, String md5) {
+    mDbHelper.update(id, contentLength, md5);
+    updateCache(id);
+  }
+
+  private void addToCache(@NonNull Task task) {
     mTaskCache.put(task.getId(), task);
+  }
+
+  private void updateCache(long id) {
+    mTaskCache.remove(id);
+    addToCache(mDbHelper.find(id));
   }
 
   private static class DbHelper extends SQLiteOpenHelper {
@@ -108,7 +125,7 @@ public class Storage {
     @Override
     public void onCreate(SQLiteDatabase db) {
       db.execSQL("CREATE TABLE IF NOT EXISTS " + Task.NAME + " ( "
-          + Task.Fields.ID + C_INTEGER + "PRIMARY KEY AUTOINCREMENT" + C_COMMA
+          + Task.Fields.ID + C_INTEGER + " PRIMARY KEY " + C_COMMA
           + Task.Fields.TAG + C_TEXT + C_COMMA
           + Task.Fields.URI + C_TEXT + C_COMMA
           + Task.Fields.TITLE + C_TEXT + C_COMMA
@@ -134,7 +151,7 @@ public class Storage {
         cursor = db().query(Task.NAME, null, Task.Fields.ID + " = ?", new String[]{String.valueOf(id)}, null, null, null);
         task = Task.create(cursor);
       } catch (Exception e) {
-        log().e(e, "could not find id %d", id);
+        log().e(e, "Could not find id %d", id);
       } finally {
         if (cursor != null) {
           cursor.close();
@@ -143,11 +160,57 @@ public class Storage {
       return task;
     }
 
+    boolean increaseRetryCount(long id) {
+      try {
+        Task task = find(id);
+        ContentValues values = new ContentValues();
+        if (!task.isForced() && task.getRetryCount() >= task.getMaxRetry()) {
+          if (task.getState() != Task.State.OUT_OF_RETRY_COUNT) {
+            values.put(Task.Fields.STATE, Task.State.OUT_OF_RETRY_COUNT.toInt());
+          }
+        } else {
+          values.put(Task.Fields.RETRY_COUNT, task.getRetryCount() + 1);
+        }
+        if (values.size() == 0) {
+          return false;
+        }
+        db().update(Task.NAME, values, Task.Fields.ID + " = ?", new String[]{String.valueOf(id)});
+      } catch (Exception e) {
+        log().e(e, "Could not increase retry count of id %d", id);
+        return false;
+      }
+      return true;
+    }
+
     boolean insert(Task task) {
       try {
+        remove(task.getId());
         db().insert(Task.NAME, null, task.toContentValues());
       } catch (Exception e) {
-        log().e(e, "could not insert task %s", task);
+        log().e(e, "Could not insert task %s", task);
+        return false;
+      }
+      return true;
+    }
+
+    boolean remove(long id) {
+      try {
+        db().delete(Task.NAME, Task.Fields.ID + " = ?", new String[]{String.valueOf(id)});
+      } catch (Exception e) {
+        log().e(e, "Could not delete task %d", id);
+        return false;
+      }
+      return true;
+    }
+
+    boolean update(long id, long contentLength, String md5) {
+      try {
+        ContentValues values = new ContentValues();
+        values.put(Task.Fields.CONTENT_LENGTH, contentLength);
+        values.put(Task.Fields.MD5, md5);
+        db().update(Task.NAME, values, Task.Fields.ID + " = ?", new String[]{String.valueOf(id)});
+      } catch (Exception e) {
+        log().e(e, "Could not update contentLength and md5 of id %d", id);
         return false;
       }
       return true;

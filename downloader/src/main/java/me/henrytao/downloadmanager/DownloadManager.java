@@ -18,10 +18,13 @@ package me.henrytao.downloadmanager;
 
 import android.content.Context;
 
+import java.io.IOException;
+
+import me.henrytao.downloadmanager.internal.Bus;
 import me.henrytao.downloadmanager.internal.Downloader;
+import me.henrytao.downloadmanager.internal.JobService;
 import me.henrytao.downloadmanager.internal.Logger;
 import me.henrytao.downloadmanager.internal.Storage;
-import me.henrytao.downloadmanager.internal.Task;
 
 /**
  * Created by henrytao on 12/12/16.
@@ -55,7 +58,11 @@ public final class DownloadManager {
     return sInstance;
   }
 
+  private final Bus mBus;
+
   private final Downloader mDownloader;
+
+  private final JobService mJobService;
 
   private final Logger mLogger;
 
@@ -64,16 +71,14 @@ public final class DownloadManager {
   private DownloadManager(Context context) {
     context = context.getApplicationContext();
     mLogger = Logger.newInstance(getClass().getSimpleName(), DEBUG ? Logger.LogLevel.VERBOSE : Logger.LogLevel.NONE);
+    mBus = new Bus();
     mStorage = new Storage(context);
-    mDownloader = new Downloader(context);
+    mJobService = new JobService(context);
+    mDownloader = new Downloader(mStorage, mBus);
   }
 
-  public void download(long id) {
-    Task task = mStorage.find(id);
-    if (task == null) {
-      return;
-    }
-
+  public void download(long id) throws IOException {
+    mDownloader.download(mStorage.find(id));
   }
 
   public long enqueue(Request request) {
@@ -82,7 +87,7 @@ public final class DownloadManager {
     }
     request.setId(mStorage.getNextTaskId());
     mStorage.enqueue(request);
-    mDownloader.enqueue(request);
+    mJobService.enqueue(request);
     return request.getId();
   }
 

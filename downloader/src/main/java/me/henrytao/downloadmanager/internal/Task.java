@@ -21,16 +21,19 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.util.SparseArray;
 
+import java.io.File;
+import java.io.IOException;
+
 import me.henrytao.downloadmanager.Request;
 
 /**
  * Created by henrytao on 7/25/16.
  */
-public final class Task {
+public class Task {
 
   static final String NAME = "task";
 
-  public static Task create(Cursor cursor) {
+  static Task create(Cursor cursor) {
     if (cursor == null || cursor.isClosed() || !cursor.moveToFirst()) {
       return null;
     }
@@ -45,14 +48,17 @@ public final class Task {
         cursor.getInt(cursor.getColumnIndex(Fields.MAX_RETRY)),
         cursor.getInt(cursor.getColumnIndex(Fields.RETRY_COUNT)),
         State.from(cursor.getInt(cursor.getColumnIndex(Fields.STATE))),
-        cursor.getLong(cursor.getColumnIndex(Fields.CONTENT_LENGTH))
+        cursor.getLong(cursor.getColumnIndex(Fields.CONTENT_LENGTH)),
+        cursor.getString(cursor.getColumnIndex(Fields.MD5))
     );
   }
 
   static Task create(Request request) {
     return new Task(request.getId(), request.getTag(), request.getUri(), request.getTitle(), request.getDescription(), request.getDestUri(),
-        request.getTempUri(), request.getRetry(), 0, State.ACTIVE, 0);
+        request.getTempUri(), request.getRetry(), 0, State.ACTIVE, 0, null);
   }
+
+  private final String mMd5;
 
   private long mContentLength;
 
@@ -76,8 +82,8 @@ public final class Task {
 
   private Uri mUri;
 
-  private Task(long id, String tag, Uri uri, String title, String description, Uri destUri, Uri tempUri, int maxRetry, int retryCount,
-      State state, long contentLength) {
+  protected Task(long id, String tag, Uri uri, String title, String description, Uri destUri, Uri tempUri, int maxRetry, int retryCount,
+      State state, long contentLength, String md5) {
     mId = id;
     mTag = tag;
     mUri = uri;
@@ -89,6 +95,16 @@ public final class Task {
     mRetryCount = retryCount;
     mState = state;
     mContentLength = contentLength;
+    mMd5 = md5;
+  }
+
+  public long getBytesRead() {
+    try {
+      File file = getTempFile();
+      return file.exists() ? file.length() : 0;
+    } catch (Exception ignore) {
+    }
+    return 0;
   }
 
   public long getContentLength() {
@@ -97,6 +113,10 @@ public final class Task {
 
   public String getDescription() {
     return mDescription;
+  }
+
+  public File getDestFile() throws IOException {
+    return FileUtils.getFile(getDestUri());
   }
 
   public Uri getDestUri() {
@@ -111,6 +131,10 @@ public final class Task {
     return mMaxRetry;
   }
 
+  public String getMd5() {
+    return mMd5;
+  }
+
   public int getRetryCount() {
     return mRetryCount;
   }
@@ -123,6 +147,10 @@ public final class Task {
     return mTag;
   }
 
+  public File getTempFile() throws IOException {
+    return FileUtils.getFile(getTempUri());
+  }
+
   public Uri getTempUri() {
     return mTempUri;
   }
@@ -133,6 +161,14 @@ public final class Task {
 
   public Uri getUri() {
     return mUri;
+  }
+
+  public boolean isActive() {
+    return getState() == State.ACTIVE;
+  }
+
+  public boolean isForced() {
+    return mMaxRetry < 0;
   }
 
   public ContentValues toContentValues() {
@@ -148,13 +184,15 @@ public final class Task {
     values.put(Fields.RETRY_COUNT, mRetryCount);
     values.put(Fields.STATE, mState.toInt());
     values.put(Fields.CONTENT_LENGTH, mContentLength);
+    values.put(Fields.MD5, mMd5);
     return values;
   }
 
   public enum State {
     ACTIVE(1),
     IN_ACTIVE(2),
-    ERROR(3);
+    OUT_OF_RETRY_COUNT(3),
+    SUCCESS(4);
 
     private static SparseArray<State> sCaches = new SparseArray<>();
 
@@ -186,6 +224,7 @@ public final class Task {
     String DEST_URI = "dest_uri";
     String ID = "_id";
     String MAX_RETRY = "max_retry";
+    String MD5 = "md5";
     String RETRY_COUNT = "retry_count";
     String STATE = "state";
     String TAG = "tag";

@@ -29,7 +29,7 @@ import me.henrytao.downloadmanager.internal.Precondition;
 
 public final class Request {
 
-  private static final int DEFAULT_RETRY = 5;
+  private static final int DEFAULT_RETRY = 30;
 
   private final String mDescription;
 

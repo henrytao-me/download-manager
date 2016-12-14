@@ -22,4 +22,7 @@ package me.henrytao.downloadmanager.internal;
 
 public class Bus {
 
+  public void downloading(long id, long bytesRead) {
+
+  }
 }
