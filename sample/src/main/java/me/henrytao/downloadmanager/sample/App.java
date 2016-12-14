@@ -42,5 +42,6 @@ public class App extends Application {
     Stetho.initializeWithDefaults(this);
 
     DownloadManager.DEBUG = true;
+    DownloadManager.create(this);
   }
 }

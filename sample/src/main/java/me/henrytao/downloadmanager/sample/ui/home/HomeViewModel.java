@@ -18,16 +18,19 @@ package me.henrytao.downloadmanager.sample.ui.home;
 
 import android.content.Context;
 import android.databinding.ObservableField;
+import android.net.Uri;
 import android.os.Environment;
 
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
+
 import me.henrytao.downloadmanager.DownloadManager;
-import me.henrytao.downloadmanager.DownloadManager.Request;
+import me.henrytao.downloadmanager.Request;
 import me.henrytao.downloadmanager.sample.App;
 import me.henrytao.downloadmanager.sample.ui.base.BaseViewModel;
-import me.henrytao.downloadmanager.utils.Logger;
-import me.henrytao.downloadmanager.utils.rx.RxUtils;
-import me.henrytao.downloadmanager.utils.rx.Transformer;
 import me.henrytao.mvvmlifecycle.rx.UnsubscribeLifeCycle;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.schedulers.Schedulers;
 
 /**
  * Created by henrytao on 7/1/16.
@@ -40,45 +43,40 @@ public class HomeViewModel extends BaseViewModel {
 
   private long mDownloadId;
 
-  private DownloadManager mDownloadManager;
-
-  private Logger mLogger;
-
   public HomeViewModel() {
-    mContext = App.getInstance();
+    mContext = App.getInstance().getApplicationContext();
   }
 
   @Override
   public void onCreateView() {
     super.onCreateView();
-    mLogger = Logger.newInstance("application", DownloadManager.DEBUG ? Logger.LogLevel.VERBOSE : Logger.LogLevel.NONE);
-    mDownloadManager = DownloadManager.getInstance(mContext);
-    mDownloadManager.initialize();
   }
 
   public void onDownloadClicked() {
-    if (mDownloadId == 0) {
-      Request request = new Request("http://download.mysquar.com.s3.amazonaws.com/apk/mychat/mychat.apk")
-          .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "/")
-          .setTitle("test.apk");
-      mDownloadId = mDownloadManager.enqueue(request);
-      showProgress(mDownloadId);
-    } else {
-      mDownloadManager.resume(mDownloadId);
-    }
+    mDownloadId = new Request.Builder(Uri.parse("http://download.mysquar.com.s3.amazonaws.com/apk/mychat/mychat.apk"))
+        .setDestPath(Uri.fromFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)))
+        .setTempPath(Uri.fromFile(mContext.getCacheDir()))
+        .build()
+        .enqueue();
+    manageSubscription("download-progress", DownloadManager.getInstance().observe(mDownloadId)
+        .debounce(500, TimeUnit.MILLISECONDS)
+        .map(info -> {
+          int percentage = info.getContentLength() > 0 ? (int) ((100 * info.getBytesRead()) / info.getContentLength()) : 0;
+          return String.format(Locale.US, "Progress %s | %d%%", info.getId(), percentage);
+        })
+        .distinctUntilChanged()
+        .subscribeOn(Schedulers.computation())
+        .observeOn(AndroidSchedulers.mainThread())
+        .subscribe(percentage -> {
+          progress.set(percentage);
+        }, Throwable::printStackTrace), UnsubscribeLifeCycle.DESTROY_VIEW);
   }
 
   public void onPauseClicked() {
-    mDownloadManager.pause(mDownloadId);
+    DownloadManager.getInstance().pause(mDownloadId);
   }
 
-  private void showProgress(long downloadId) {
-    manageSubscription(mDownloadManager.observe(downloadId)
-        .compose(RxUtils.distinctInfoUntilChanged(300))
-        .compose(Transformer.applyComputationScheduler())
-        .subscribe(info -> {
-          int percentage = info.contentLength > 0 ? (int) ((100 * info.bytesRead) / info.contentLength) : 0;
-          mLogger.d("Progress %s | %s | %d%%", downloadId, info.state, percentage);
-        }, Throwable::printStackTrace), UnsubscribeLifeCycle.DESTROY_VIEW);
+  public void onResumeClicked() {
+    DownloadManager.getInstance().resume(mDownloadId);
   }
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package me.henrytao.downloadmanager.utils.rx;
+package me.henrytao.downloadmanager.internal;
 
 import rx.Subscriber;
 import rx.Subscription;
@@ -22,7 +22,7 @@ import rx.Subscription;
 /**
  * Created by henrytao on 4/15/16.
  */
-public class SubscriptionUtils {
+class SubscriptionUtils {
 
   public static <T> void onComplete(Subscriber<T> subscriber) {
     if (subscriber != null && !subscriber.isUnsubscribed()) {

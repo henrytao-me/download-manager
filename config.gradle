@@ -24,10 +24,10 @@ ext {
       compileSdkVersion: 23,
       buildToolsVersion: "23.0.2",
       applicationId    : "me.henrytao.downloadmanager",
-      minSdkVersion    : 11,
+      minSdkVersion    : 14,
       targetSdkVersion : 23,
       versionCode      : 1,
-      versionName      : "0.4.2"
+      versionName      : "1.0.0"
   ]
 
   versioning = [
@@ -67,29 +67,33 @@ ext {
   ]
 
   dependencies = [
-      "com.squareup.okhttp3:okhttp": "com.squareup.okhttp3:okhttp:3.4.1",
-      "io.reactivex:rxandroid"     : "io.reactivex:rxandroid:1.2.1",
-      "io.reactivex:rxjava"        : "io.reactivex:rxjava:1.1.6"
+      "com.android.support:support-v4": "com.android.support:support-v4:23.3.0",
+      "com.evernote:android-job"      : "com.evernote:android-job:1.1.3",
+      "com.squareup.okhttp3:okhttp"   : "com.squareup.okhttp3:okhttp:3.4.1",
+      "io.reactivex:rxandroid"        : "io.reactivex:rxandroid:1.2.1",
+      "io.reactivex:rxjava"           : "io.reactivex:rxjava:1.1.6"
   ]
 
   sampleDependencies = [
-      "com.android.support:design"         : "com.android.support:design:23.3.0",
-      "com.android.support:appcompat-v7"   : "com.android.support:appcompat-v7:23.3.0",
-      "com.android.support:cardview-v7"    : "com.android.support:cardview-v7:23.3.0",
-      "com.android.support:recyclerview-v7": "com.android.support:recyclerview-v7:23.3.0",
+      "com.android.support:design"               : "com.android.support:design:23.3.0",
+      "com.android.support:appcompat-v7"         : "com.android.support:appcompat-v7:23.3.0",
+      "com.android.support:cardview-v7"          : "com.android.support:cardview-v7:23.3.0",
+      "com.android.support:recyclerview-v7"      : "com.android.support:recyclerview-v7:23.3.0",
 
-      "com.facebook.stetho:stetho"         : "com.facebook.stetho:stetho:1.3.1",
+      "com.facebook.stetho:stetho"               : "com.facebook.stetho:stetho:1.3.1",
 
-      "me.henrytao:mdcore"                 : "me.henrytao:mdcore:3.0.2",
-      "me.henrytao:mvvm-life-cycle"        : "me.henrytao:mvvm-life-cycle:2.3.0",
-      "me.henrytao:recyclerview"           : "me.henrytao:recyclerview:3.0.7",
-      "me.henrytao:smooth-app-bar-layout"  : "me.henrytao:smooth-app-bar-layout:3.0.0",
+      "com.tbruyelle.rxpermissions:rxpermissions": "com.tbruyelle.rxpermissions:rxpermissions:0.9.1@aar",
 
-      "org.projectlombok:lombok"           : "org.projectlombok:lombok:1.16.8",
+      "me.henrytao:mdcore"                       : "me.henrytao:mdcore:3.0.2",
+      "me.henrytao:mvvm-life-cycle"              : "me.henrytao:mvvm-life-cycle:2.3.0",
+      "me.henrytao:recyclerview"                 : "me.henrytao:recyclerview:3.0.7",
+      "me.henrytao:smooth-app-bar-layout"        : "me.henrytao:smooth-app-bar-layout:3.0.0",
 
-      "junit:junit"                        : "junit:junit:4.12",
-      "org.robolectric:robolectric"        : "org.robolectric:robolectric:3.0",
-      "org.robolectric:shadows-core"       : "org.robolectric:shadows-core:3.0",
-      "org.robolectric:shadows-support-v4" : "org.robolectric:shadows-support-v4:3.0"
+      "org.projectlombok:lombok"                 : "org.projectlombok:lombok:1.16.8",
+
+      "junit:junit"                              : "junit:junit:4.12",
+      "org.robolectric:robolectric"              : "org.robolectric:robolectric:3.0",
+      "org.robolectric:shadows-core"             : "org.robolectric:shadows-core:3.0",
+      "org.robolectric:shadows-support-v4"       : "org.robolectric:shadows-support-v4:3.0"
   ]
 }

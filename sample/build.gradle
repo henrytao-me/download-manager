@@ -89,6 +89,13 @@ dependencies {
   compile rootProject.ext.sampleDependencies["com.android.support:cardview-v7"]
   compile rootProject.ext.sampleDependencies["com.android.support:recyclerview-v7"]
 
+  compile 'com.google.firebase:firebase-core:10.0.1'
+  compile 'com.google.firebase:firebase-database:10.0.1'
+
+  compile rootProject.ext.dependencies["com.evernote:android-job"]
+
+  compile rootProject.ext.sampleDependencies["com.tbruyelle.rxpermissions:rxpermissions"]
+
   compile(rootProject.ext.sampleDependencies["me.henrytao:mdcore"]) {
     exclude group: "com.android.support"
   }
@@ -104,11 +111,9 @@ dependencies {
 
   compile rootProject.ext.sampleDependencies["com.facebook.stetho:stetho"]
 
-  compile project(":download-manager")
+   compile project(":download-manager")
 
   testCompile rootProject.ext.sampleDependencies["junit:junit"]
-//  testCompile(rootProject.ext.sampleDependencies["org.robolectric:robolectric"]) {
-//    transitive = true
-//  }
-//  testCompile rootProject.ext.sampleDependencies["org.robolectric:shadows-support-v4"]
 }
+
+apply plugin: "com.google.gms.google-services"

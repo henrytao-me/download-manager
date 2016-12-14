@@ -14,13 +14,17 @@
  * limitations under the License.
  */
 
-package me.henrytao.downloadmanager.utils;
+package me.henrytao.downloadmanager.internal;
 
 import android.util.Log;
 
+/**
+ * Created by henrytao on 12/13/16.
+ */
+
 public final class Logger {
 
-  private final static String DEFAULT_TAG = "download-manager";
+  private final static String DEFAULT_TAG = "LOGGER";
 
   public static Logger newInstance(LogLevel level) {
     return new Logger(DEFAULT_TAG, level);
@@ -34,7 +38,7 @@ public final class Logger {
 
   private final String mTag;
 
-  protected Logger(String tag, LogLevel logLevel) {
+  private Logger(String tag, LogLevel logLevel) {
     mTag = tag;
     mLogLevel = logLevel;
   }
@@ -45,16 +49,14 @@ public final class Logger {
     }
   }
 
-  public void e(Throwable error, String format, Object... args) {
-    if (shouldLog(LogLevel.INFO)) {
-      Log.e(mTag, String.format(format, args), error);
+  public void e(Throwable throwable, String format, Object... args) {
+    if (shouldLog(LogLevel.ERROR)) {
+      Log.e(mTag, String.format(format, args), throwable);
     }
   }
 
-  public void e(String format, Object... args) {
-    if (shouldLog(LogLevel.ERROR)) {
-      Log.e(mTag, String.format(format, args));
-    }
+  public void e(Throwable throwable) {
+    e(throwable, "");
   }
 
   public void i(String format, Object... args) {
