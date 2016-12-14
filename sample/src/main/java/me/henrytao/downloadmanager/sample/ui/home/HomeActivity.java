@@ -16,6 +16,8 @@
 
 package me.henrytao.downloadmanager.sample.ui.home;
 
+import com.tbruyelle.rxpermissions.RxPermissions;
+
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
@@ -28,6 +30,7 @@ import android.view.Menu;
 import me.henrytao.downloadmanager.sample.ui.base.BaseActivity;
 import me.henrytao.firechatengine.sample.R;
 import me.henrytao.firechatengine.sample.databinding.ActivityHomeBinding;
+import me.henrytao.mvvmlifecycle.rx.UnsubscribeLifeCycle;
 
 /**
  * Created by henrytao on 7/1/16.
@@ -65,6 +68,10 @@ public class HomeActivity extends BaseActivity {
     super.onCreate(savedInstanceState);
     setSupportActionBar(mBinding.toolbar);
     requestWriteExternalStoragePermission();
+
+    manageSubscription(new RxPermissions(this)
+        .request(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        .subscribe(), UnsubscribeLifeCycle.DESTROY);
   }
 
   private void requestWriteExternalStoragePermission() {

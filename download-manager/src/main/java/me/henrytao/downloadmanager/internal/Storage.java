@@ -47,6 +47,10 @@ public class Storage {
 
   private static final String PREF_TASK_COUNTER = "PREF_TASK_COUNTER";
 
+  private static Logger log() {
+    return DownloadManager.getInstance().getLogger();
+  }
+
   private final DbHelper mDbHelper;
 
   private final SharedPreferences mPreferences;
@@ -144,6 +148,7 @@ public class Storage {
           + Task.Fields.RETRY_COUNT + C_INTEGER + C_COMMA
           + Task.Fields.STATE + C_INTEGER + C_COMMA
           + Task.Fields.CONTENT_LENGTH + C_INTEGER + C_COMMA
+          + Task.Fields.MD5 + C_TEXT
           + " )");
     }
 
@@ -245,10 +250,6 @@ public class Storage {
         }
       }
       return mDb;
-    }
-
-    private Logger log() {
-      return DownloadManager.getInstance().getLogger();
     }
   }
 

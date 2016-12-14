@@ -178,7 +178,7 @@ public final class Request {
     }
 
     public Request build() {
-      mDestFilename = Precondition.checkNotEmpty(mDestFilename, mUri.getPath());
+      mDestFilename = Precondition.checkNotEmpty(mDestFilename, mUri.getLastPathSegment());
       mTempFilename = Precondition.checkNotEmpty(mTempFilename, UUID.randomUUID().toString());
       return new Request(
           Precondition.checkNotNull(mUri),

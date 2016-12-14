@@ -21,6 +21,7 @@ import android.support.v4.util.LongSparseArray;
 
 import java.util.Locale;
 
+import me.henrytao.downloadmanager.DownloadManager;
 import me.henrytao.downloadmanager.Info;
 import rx.Observable;
 import rx.subjects.PublishSubject;
@@ -30,6 +31,10 @@ import rx.subjects.PublishSubject;
  */
 
 public class Bus {
+
+  private static Logger log() {
+    return DownloadManager.getInstance().getLogger();
+  }
 
   private final Storage mStorage;
 
@@ -62,19 +67,22 @@ public class Bus {
           switch (task.getState()) {
             case ACTIVE:
               if (task.getBytesRead() == 0) {
-                SubscriptionUtils.onNext(subscriber, Info.create(task, 0, Info.Status.QUEUEING));
+                SubscriptionUtils.onNextAndComplete(subscriber, Info.create(task, 0, Info.Status.QUEUEING));
               } else {
-                SubscriptionUtils.onNext(subscriber, Info.create(task, 0, Info.Status.DOWNLOADING));
+                SubscriptionUtils.onNextAndComplete(subscriber, Info.create(task, 0, Info.Status.DOWNLOADING));
               }
               break;
             case IN_ACTIVE:
-              SubscriptionUtils.onNext(subscriber, Info.create(task, 0, Info.Status.PAUSING));
+              SubscriptionUtils.onNextAndComplete(subscriber, Info.create(task, 0, Info.Status.PAUSING));
               break;
             case OUT_OF_RETRY_COUNT:
-              SubscriptionUtils.onNext(subscriber, Info.create(task, 0, Info.Status.FAILED));
+              SubscriptionUtils.onNextAndComplete(subscriber, Info.create(task, 0, Info.Status.FAILED));
               break;
             case SUCCESS:
-              SubscriptionUtils.onNext(subscriber, Info.create(task, 0, Info.Status.SUCCEED));
+              SubscriptionUtils.onNextAndComplete(subscriber, Info.create(task, 0, Info.Status.SUCCEED));
+              break;
+            default:
+              SubscriptionUtils.onNextAndComplete(subscriber, Info.create(task, 0, Info.Status.FAILED));
               break;
           }
         }),
@@ -111,6 +119,7 @@ public class Bus {
   private void onNext(long id, Info info) {
     if (info != null) {
       get(id).onNext(info);
+      log().i("Bus | onNext | %s | contentLength %d | bytesRead %d", info.getStatus(), info.getContentLength(), info.getBytesRead());
     }
   }
 }

@@ -20,7 +20,6 @@ import org.junit.Test;
 
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import rx.Observable;
 import rx.schedulers.Schedulers;
@@ -38,15 +37,6 @@ public class ExampleUnitTest {
     String hello = "abc";
     System.out.println(hello);
     assertThat(hello == "abc", equalTo(true));
-    AtomicInteger value = new AtomicInteger(Integer.MAX_VALUE);
-    System.out.println(String.format(Locale.US, "output | %d", value.get()));
-    int test = value.incrementAndGet();
-    System.out.println(String.format(Locale.US, "output | %d", test));
-  }
-
-  @Test
-  public void testRxJava() {
-
   }
 
   @Test

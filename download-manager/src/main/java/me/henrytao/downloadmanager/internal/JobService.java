@@ -23,10 +23,9 @@ import com.evernote.android.job.util.support.PersistableBundleCompat;
 import android.content.Context;
 import android.support.annotation.NonNull;
 
-import java.util.concurrent.TimeUnit;
+import java.util.Set;
 
 import me.henrytao.downloadmanager.DownloadManager;
-import me.henrytao.downloadmanager.Request;
 
 /**
  * Created by henrytao on 12/13/16.
@@ -34,27 +33,40 @@ import me.henrytao.downloadmanager.Request;
 
 public final class JobService {
 
+  private static DownloadManager.Config getConfig() {
+    return DownloadManager.getInstance().getConfig();
+  }
+
   public JobService(Context context) {
     JobManager.create(context.getApplicationContext()).addJobCreator(new JobService.JobCreator());
   }
 
-  public void enqueue(Request request) {
-    Job.create(request.getId()).schedule();
+  public void enqueue(long taskId) {
+    Job.create(taskId).schedule();
+  }
+
+  public void stop(long taskId) {
+    Set<JobRequest> requests = JobManager.instance().getAllJobRequestsForTag(Job.TAG);
+    for (JobRequest request : requests) {
+      if (request.getExtras().getLong(Job.EXTRA_TASK_ID, 0) == taskId) {
+        JobManager.instance().cancel(request.getJobId());
+      }
+    }
   }
 
   private static final class Job extends com.evernote.android.job.Job {
 
-    private static final String EXTRA_ID = "EXTRA_ID";
+    private static final String EXTRA_TASK_ID = "EXTRA_TASK_ID";
 
     private static final String TAG = "DOWNLOADER";
 
-    private static JobRequest create(long id) {
+    private static JobRequest create(long taskId) {
       PersistableBundleCompat bundle = new PersistableBundleCompat();
-      bundle.putLong(EXTRA_ID, id);
+      bundle.putLong(EXTRA_TASK_ID, taskId);
       return new JobRequest.Builder(TAG)
-          .setExecutionWindow(TimeUnit.SECONDS.toMillis(2), TimeUnit.SECONDS.toMillis(3))
-          .setBackoffCriteria(TimeUnit.SECONDS.toMillis(2), JobRequest.BackoffPolicy.LINEAR)
-          .setPersisted(true)
+          .setExecutionWindow(getConfig().executionWindowStartInMilliseconds, getConfig().executionWindowEndInMilliseconds)
+          .setBackoffCriteria(getConfig().backoffInMilliseconds, getConfig().backoffPolicy)
+          .setPersisted(getConfig().persisted)
           .setExtras(bundle)
           .setRequiredNetworkType(JobRequest.NetworkType.CONNECTED)
           .setRequirementsEnforced(true)
@@ -65,7 +77,7 @@ public final class JobService {
     @Override
     protected Result onRunJob(Params params) {
       try {
-        DownloadManager.getInstance().download(params.getExtras().getLong(EXTRA_ID, 0));
+        DownloadManager.getInstance().download(params.getExtras().getLong(EXTRA_TASK_ID, 0));
       } catch (Exception e) {
         return Result.RESCHEDULE;
       }

@@ -98,6 +98,68 @@ public class Task {
     mMd5 = md5;
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    Task task = (Task) o;
+    if (mContentLength != task.mContentLength) {
+      return false;
+    }
+    if (mId != task.mId) {
+      return false;
+    }
+    if (mMaxRetry != task.mMaxRetry) {
+      return false;
+    }
+    if (mRetryCount != task.mRetryCount) {
+      return false;
+    }
+    if (mMd5 != null ? !mMd5.equals(task.mMd5) : task.mMd5 != null) {
+      return false;
+    }
+    if (mDescription != null ? !mDescription.equals(task.mDescription) : task.mDescription != null) {
+      return false;
+    }
+    if (!mDestUri.equals(task.mDestUri)) {
+      return false;
+    }
+    if (mState != task.mState) {
+      return false;
+    }
+    if (mTag != null ? !mTag.equals(task.mTag) : task.mTag != null) {
+      return false;
+    }
+    if (!mTempUri.equals(task.mTempUri)) {
+      return false;
+    }
+    if (mTitle != null ? !mTitle.equals(task.mTitle) : task.mTitle != null) {
+      return false;
+    }
+    return mUri.equals(task.mUri);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = mMd5 != null ? mMd5.hashCode() : 0;
+    result = 31 * result + (int) (mContentLength ^ (mContentLength >>> 32));
+    result = 31 * result + (mDescription != null ? mDescription.hashCode() : 0);
+    result = 31 * result + mDestUri.hashCode();
+    result = 31 * result + (int) (mId ^ (mId >>> 32));
+    result = 31 * result + mMaxRetry;
+    result = 31 * result + mRetryCount;
+    result = 31 * result + (mState != null ? mState.hashCode() : 0);
+    result = 31 * result + (mTag != null ? mTag.hashCode() : 0);
+    result = 31 * result + mTempUri.hashCode();
+    result = 31 * result + (mTitle != null ? mTitle.hashCode() : 0);
+    result = 31 * result + mUri.hashCode();
+    return result;
+  }
+
   public long getBytesRead() {
     try {
       File file = getTempFile();
@@ -105,6 +167,7 @@ public class Task {
     } catch (Exception ignore) {
     }
     return 0;
+
   }
 
   public long getContentLength() {
