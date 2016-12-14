@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Locale;
 
+import me.henrytao.downloadmanager.DownloadManager;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -35,7 +36,9 @@ public class Downloader {
 
   private static final int REQUESTED_RANGE_NOT_SATISFIABLE = 416;
 
-  private static int BUFFER_SIZE = 2048;
+  private static DownloadManager.Config getConfig() {
+    return DownloadManager.getInstance().getConfig();
+  }
 
   private final Bus mBus;
 
@@ -71,7 +74,7 @@ public class Downloader {
 
       input = response.response.body().byteStream();
       output = new FileOutputStream(response.file, bytesRead != 0);
-      byte data[] = new byte[BUFFER_SIZE];
+      byte data[] = new byte[getConfig().bufferSize];
       int count;
       if (!isCanceled(task.getId())) {
         while ((count = input.read(data)) != -1) {

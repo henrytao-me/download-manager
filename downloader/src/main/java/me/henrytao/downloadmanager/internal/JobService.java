@@ -24,7 +24,6 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import me.henrytao.downloadmanager.DownloadManager;
 
@@ -33,6 +32,10 @@ import me.henrytao.downloadmanager.DownloadManager;
  */
 
 public final class JobService {
+
+  private static DownloadManager.Config getConfig() {
+    return DownloadManager.getInstance().getConfig();
+  }
 
   public JobService(Context context) {
     JobManager.create(context.getApplicationContext()).addJobCreator(new JobService.JobCreator());
@@ -61,9 +64,9 @@ public final class JobService {
       PersistableBundleCompat bundle = new PersistableBundleCompat();
       bundle.putLong(EXTRA_TASK_ID, taskId);
       return new JobRequest.Builder(TAG)
-          .setExecutionWindow(TimeUnit.SECONDS.toMillis(2), TimeUnit.SECONDS.toMillis(3))
-          .setBackoffCriteria(TimeUnit.SECONDS.toMillis(2), JobRequest.BackoffPolicy.LINEAR)
-          .setPersisted(true)
+          .setExecutionWindow(getConfig().executionWindowStartInMilliseconds, getConfig().executionWindowEndInMilliseconds)
+          .setBackoffCriteria(getConfig().backoffInMilliseconds, getConfig().backoffPolicy)
+          .setPersisted(getConfig().persisted)
           .setExtras(bundle)
           .setRequiredNetworkType(JobRequest.NetworkType.CONNECTED)
           .setRequirementsEnforced(true)

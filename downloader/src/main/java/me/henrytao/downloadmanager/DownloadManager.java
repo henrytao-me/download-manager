@@ -16,7 +16,10 @@
 
 package me.henrytao.downloadmanager;
 
+import com.evernote.android.job.JobRequest;
+
 import android.content.Context;
+import android.support.annotation.NonNull;
 
 import java.io.IOException;
 
@@ -34,19 +37,35 @@ import rx.Observable;
 
 public final class DownloadManager {
 
+  private static final long DEFAULT_BACKOFF_IN_MILLISECONDS = 2000;
+
+  private static final JobRequest.BackoffPolicy DEFAULT_BACKOFF_POLICY = JobRequest.BackoffPolicy.LINEAR;
+
+  private static final int DEFAULT_BUFFER_SIZE = 2048;
+
+  private static final long DEFAULT_EXECUTION_WINDOW_END_IN_MILLISECONDS = 3000;
+
+  private static final long DEFAULT_EXECUTION_WINDOW_START_IN_MILLISECONDS = 2000;
+
+  private static final boolean DEFAULT_PERSISTED = true;
+
   public static boolean DEBUG = false;
 
   private static volatile DownloadManager sInstance;
 
-  public static DownloadManager create(Context context) {
+  public static DownloadManager create(@NonNull Context context, @NonNull Config config) {
     if (sInstance == null) {
       synchronized (DownloadManager.class) {
         if (sInstance == null) {
-          sInstance = new DownloadManager(context);
+          sInstance = new DownloadManager(context, config);
         }
       }
     }
     return sInstance;
+  }
+
+  public static DownloadManager create(@NonNull Context context) {
+    return create(context, new Config.Builder().build());
   }
 
   public static DownloadManager getInstance() {
@@ -62,6 +81,8 @@ public final class DownloadManager {
 
   private final Bus mBus;
 
+  private final Config mConfig;
+
   private final Downloader mDownloader;
 
   private final JobService mJobService;
@@ -70,8 +91,9 @@ public final class DownloadManager {
 
   private final Storage mStorage;
 
-  private DownloadManager(Context context) {
+  private DownloadManager(Context context, Config config) {
     context = context.getApplicationContext();
+    mConfig = config;
     mLogger = Logger.newInstance(getClass().getSimpleName(), DEBUG ? Logger.LogLevel.VERBOSE : Logger.LogLevel.NONE);
     mJobService = new JobService(context);
     mStorage = new Storage(context);
@@ -93,6 +115,10 @@ public final class DownloadManager {
     return request.getId();
   }
 
+  public Config getConfig() {
+    return mConfig;
+  }
+
   public Logger getLogger() {
     return mLogger;
   }
@@ -110,5 +136,89 @@ public final class DownloadManager {
     mJobService.stop(id);
     mStorage.update(id, Task.State.ACTIVE);
     mJobService.enqueue(id);
+  }
+
+  public static class Config {
+
+    public final long backoffInMilliseconds;
+
+    public final JobRequest.BackoffPolicy backoffPolicy;
+
+    public final int bufferSize;
+
+    public final long executionWindowEndInMilliseconds;
+
+    public final long executionWindowStartInMilliseconds;
+
+    public final boolean persisted;
+
+    private Config(long executionWindowStartInMilliseconds, long executionWindowEndInMilliseconds, long backoffInMilliseconds,
+        JobRequest.BackoffPolicy backoffPolicy, boolean persisted, int bufferSize) {
+      this.executionWindowStartInMilliseconds = executionWindowStartInMilliseconds;
+      this.executionWindowEndInMilliseconds = executionWindowEndInMilliseconds;
+      this.backoffInMilliseconds = backoffInMilliseconds;
+      this.backoffPolicy = backoffPolicy;
+      this.persisted = persisted;
+      this.bufferSize = bufferSize;
+    }
+
+    public static class Builder {
+
+      private long mBackoffInMilliseconds;
+
+      private JobRequest.BackoffPolicy mBackoffPolicy;
+
+      private int mBufferSize;
+
+      private long mExecutionWindowEndInMilliseconds;
+
+      private long mExecutionWindowStartInMilliseconds;
+
+      private boolean mPersisted;
+
+      public Builder() {
+        mExecutionWindowStartInMilliseconds = DEFAULT_EXECUTION_WINDOW_START_IN_MILLISECONDS;
+        mExecutionWindowEndInMilliseconds = DEFAULT_EXECUTION_WINDOW_END_IN_MILLISECONDS;
+        mBackoffInMilliseconds = DEFAULT_BACKOFF_IN_MILLISECONDS;
+        mBackoffPolicy = DEFAULT_BACKOFF_POLICY;
+        mPersisted = DEFAULT_PERSISTED;
+        mBufferSize = DEFAULT_BUFFER_SIZE;
+      }
+
+      public Config build() {
+        return new Config(mExecutionWindowStartInMilliseconds, mExecutionWindowEndInMilliseconds, mBackoffInMilliseconds, mBackoffPolicy,
+            mPersisted, mBufferSize);
+      }
+
+      public Builder setBackoffInMilliseconds(long backoffInMilliseconds) {
+        mBackoffInMilliseconds = backoffInMilliseconds;
+        return this;
+      }
+
+      public Builder setBackoffPolicy(JobRequest.BackoffPolicy backoffPolicy) {
+        mBackoffPolicy = backoffPolicy;
+        return this;
+      }
+
+      public Builder setBufferSize(int bufferSize) {
+        mBufferSize = bufferSize;
+        return this;
+      }
+
+      public Builder setExecutionWindowEndInMilliseconds(long executionWindowEndInMilliseconds) {
+        mExecutionWindowEndInMilliseconds = executionWindowEndInMilliseconds;
+        return this;
+      }
+
+      public Builder setExecutionWindowStartInMilliseconds(long executionWindowStartInMilliseconds) {
+        mExecutionWindowStartInMilliseconds = executionWindowStartInMilliseconds;
+        return this;
+      }
+
+      public Builder setPersisted(boolean persisted) {
+        mPersisted = persisted;
+        return this;
+      }
+    }
   }
 }
