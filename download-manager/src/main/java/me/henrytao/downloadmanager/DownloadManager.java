@@ -16,159 +16,209 @@
 
 package me.henrytao.downloadmanager;
 
+import com.evernote.android.job.JobRequest;
+
 import android.content.Context;
-import android.net.Uri;
-import android.os.Environment;
+import android.support.annotation.NonNull;
 
-import java.io.File;
+import java.io.IOException;
 
-import me.henrytao.downloadmanager.internal.DownloadBus;
+import me.henrytao.downloadmanager.internal.Bus;
+import me.henrytao.downloadmanager.internal.Downloader;
+import me.henrytao.downloadmanager.internal.JobService;
+import me.henrytao.downloadmanager.internal.Logger;
+import me.henrytao.downloadmanager.internal.Storage;
+import me.henrytao.downloadmanager.internal.Task;
 import rx.Observable;
 
 /**
- * Created by henrytao on 7/25/16.
+ * Created by henrytao on 12/12/16.
  */
-public class DownloadManager {
+
+public final class DownloadManager {
+
+  private static final long DEFAULT_BACKOFF_IN_MILLISECONDS = 2000;
+
+  private static final JobRequest.BackoffPolicy DEFAULT_BACKOFF_POLICY = JobRequest.BackoffPolicy.LINEAR;
+
+  private static final int DEFAULT_BUFFER_SIZE = 2048;
+
+  private static final long DEFAULT_EXECUTION_WINDOW_END_IN_MILLISECONDS = 3000;
+
+  private static final long DEFAULT_EXECUTION_WINDOW_START_IN_MILLISECONDS = 2000;
+
+  private static final boolean DEFAULT_PERSISTED = true;
 
   public static boolean DEBUG = false;
 
-  private static DownloadManager sInstance;
+  private static volatile DownloadManager sInstance;
 
-  public static DownloadManager getInstance(Context context) {
+  public static DownloadManager create(@NonNull Context context, @NonNull Config config) {
     if (sInstance == null) {
       synchronized (DownloadManager.class) {
         if (sInstance == null) {
-          sInstance = new DownloadManager(context);
+          sInstance = new DownloadManager(context, config);
         }
       }
     }
     return sInstance;
   }
 
-  private final Context mContext;
+  public static DownloadManager create(@NonNull Context context) {
+    return create(context, new Config.Builder().build());
+  }
 
-  private final DownloadBus mDownloadBus;
+  public static DownloadManager getInstance() {
+    if (sInstance == null) {
+      synchronized (DownloadManager.class) {
+        if (sInstance == null) {
+          throw new IllegalStateException("You need to call create() at least once to create the singleton");
+        }
+      }
+    }
+    return sInstance;
+  }
 
-  protected DownloadManager(Context context) {
-    mContext = context.getApplicationContext();
-    mDownloadBus = DownloadBus.getInstance(mContext);
+  private final Bus mBus;
+
+  private final Config mConfig;
+
+  private final Downloader mDownloader;
+
+  private final JobService mJobService;
+
+  private final Logger mLogger;
+
+  private final Storage mStorage;
+
+  private DownloadManager(Context context, Config config) {
+    context = context.getApplicationContext();
+    mConfig = config;
+    mLogger = Logger.newInstance(getClass().getSimpleName(), DEBUG ? Logger.LogLevel.VERBOSE : Logger.LogLevel.NONE);
+    mJobService = new JobService(context);
+    mStorage = new Storage(context);
+    mBus = new Bus(mStorage);
+    mDownloader = new Downloader(mStorage, mBus);
+  }
+
+  public void download(long id) throws IOException {
+    mDownloader.download(mStorage.find(id));
   }
 
   public long enqueue(Request request) {
-    return mDownloadBus.enqueue(request);
+    if (request.isEnqueued()) {
+      return request.getId();
+    }
+    request.setId(mStorage.getNextTaskId());
+    mStorage.enqueue(request);
+    mJobService.enqueue(request.getId());
+    return request.getId();
   }
 
-  public long enqueue(Request request, boolean shouldStartNow) {
-    return mDownloadBus.enqueue(request, shouldStartNow);
-  } 
-
-  public Info.State getState(long id) {
-    return mDownloadBus.getState(id);
+  public Config getConfig() {
+    return mConfig;
   }
 
-  public void initialize() {
-    mDownloadBus.enqueue(0);
+  public Logger getLogger() {
+    return mLogger;
   }
 
   public Observable<Info> observe(long id) {
-    return observe(id, false);
-  }
-
-  public Observable<Info> observe(long id, boolean shouldThrowError) {
-    return mDownloadBus.observe(id, shouldThrowError);
+    return mBus.observe(id);
   }
 
   public void pause(long id) {
-    mDownloadBus.pause(id);
+    mJobService.stop(id);
+    mStorage.update(id, Task.State.IN_ACTIVE);
   }
 
   public void resume(long id) {
-    mDownloadBus.resume(id);
+    mJobService.stop(id);
+    mStorage.update(id, Task.State.ACTIVE);
+    mJobService.enqueue(id);
   }
 
-  public void setTempPath(Uri tempPath) {
-    mDownloadBus.setTempPath(tempPath);
-  }
+  public static class Config {
 
-  public static class Request {
+    public final long backoffInMilliseconds;
 
-    private final Uri mUri;
+    public final JobRequest.BackoffPolicy backoffPolicy;
 
-    private Uri mDestinationUri;
+    public final int bufferSize;
 
-    private String mTitle;
+    public final long executionWindowEndInMilliseconds;
 
-    public Request(Uri uri) {
-      if (uri == null) {
-        throw new NullPointerException();
+    public final long executionWindowStartInMilliseconds;
+
+    public final boolean persisted;
+
+    private Config(long executionWindowStartInMilliseconds, long executionWindowEndInMilliseconds, long backoffInMilliseconds,
+        JobRequest.BackoffPolicy backoffPolicy, boolean persisted, int bufferSize) {
+      this.executionWindowStartInMilliseconds = executionWindowStartInMilliseconds;
+      this.executionWindowEndInMilliseconds = executionWindowEndInMilliseconds;
+      this.backoffInMilliseconds = backoffInMilliseconds;
+      this.backoffPolicy = backoffPolicy;
+      this.persisted = persisted;
+      this.bufferSize = bufferSize;
+    }
+
+    public static class Builder {
+
+      private long mBackoffInMilliseconds;
+
+      private JobRequest.BackoffPolicy mBackoffPolicy;
+
+      private int mBufferSize;
+
+      private long mExecutionWindowEndInMilliseconds;
+
+      private long mExecutionWindowStartInMilliseconds;
+
+      private boolean mPersisted;
+
+      public Builder() {
+        mExecutionWindowStartInMilliseconds = DEFAULT_EXECUTION_WINDOW_START_IN_MILLISECONDS;
+        mExecutionWindowEndInMilliseconds = DEFAULT_EXECUTION_WINDOW_END_IN_MILLISECONDS;
+        mBackoffInMilliseconds = DEFAULT_BACKOFF_IN_MILLISECONDS;
+        mBackoffPolicy = DEFAULT_BACKOFF_POLICY;
+        mPersisted = DEFAULT_PERSISTED;
+        mBufferSize = DEFAULT_BUFFER_SIZE;
       }
-      String scheme = uri.getScheme();
-      if (scheme == null || (!scheme.equals("http") && !scheme.equals("https"))) {
-        throw new IllegalArgumentException("Can only download HTTP/HTTPS URIs: " + uri);
+
+      public Config build() {
+        return new Config(mExecutionWindowStartInMilliseconds, mExecutionWindowEndInMilliseconds, mBackoffInMilliseconds, mBackoffPolicy,
+            mPersisted, mBufferSize);
       }
-      mUri = uri;
-    }
 
-    public Request(String uri) {
-      this(Uri.parse(uri));
-    }
-
-    public Uri getDestinationUri() {
-      return mDestinationUri;
-    }
-
-    public Request setDestinationUri(Uri uri) {
-      mDestinationUri = uri;
-      return this;
-    }
-
-    public String getTitle() {
-      return mTitle == null || mTitle.length() == 0 ? mUri.getLastPathSegment() : mTitle;
-    }
-
-    public Request setTitle(String title) {
-      mTitle = title;
-      return this;
-    }
-
-    public Uri getUri() {
-      return mUri;
-    }
-
-    public Request setDestinationInExternalPublicDir(String dirType, String subPath) {
-      File file = Environment.getExternalStoragePublicDirectory(dirType);
-      if (file == null) {
-        throw new IllegalStateException("Failed to get external storage public directory");
-      } else if (file.exists()) {
-        if (!file.isDirectory()) {
-          throw new IllegalStateException(file.getAbsolutePath() + " already exists and is not a directory");
-        }
-      } else {
-        if (!file.mkdirs()) {
-          throw new IllegalStateException("Unable to create directory: " + file.getAbsolutePath());
-        }
+      public Builder setBackoffInMilliseconds(long backoffInMilliseconds) {
+        mBackoffInMilliseconds = backoffInMilliseconds;
+        return this;
       }
-      setDestinationFromBase(file, subPath);
-      return this;
-    }
 
-    public void validate() throws IllegalArgumentException {
-      if (getUri() == null) {
-        throw new IllegalArgumentException("Uri can not be null");
+      public Builder setBackoffPolicy(JobRequest.BackoffPolicy backoffPolicy) {
+        mBackoffPolicy = backoffPolicy;
+        return this;
       }
-      if (getDestinationUri() == null) {
-        throw new IllegalArgumentException("DestinationUri can not be null");
-      }
-      if (getTitle() == null || getTitle().length() == 0) {
-        throw new IllegalArgumentException("Title can not be null");
-      }
-    }
 
-    private void setDestinationFromBase(File base, String subPath) {
-      if (subPath == null) {
-        throw new NullPointerException("subPath cannot be null");
+      public Builder setBufferSize(int bufferSize) {
+        mBufferSize = bufferSize;
+        return this;
       }
-      mDestinationUri = Uri.withAppendedPath(Uri.fromFile(base), subPath);
+
+      public Builder setExecutionWindowEndInMilliseconds(long executionWindowEndInMilliseconds) {
+        mExecutionWindowEndInMilliseconds = executionWindowEndInMilliseconds;
+        return this;
+      }
+
+      public Builder setExecutionWindowStartInMilliseconds(long executionWindowStartInMilliseconds) {
+        mExecutionWindowStartInMilliseconds = executionWindowStartInMilliseconds;
+        return this;
+      }
+
+      public Builder setPersisted(boolean persisted) {
+        mPersisted = persisted;
+        return this;
+      }
     }
   }
 }

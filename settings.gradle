@@ -14,4 +14,4 @@
  * limitations under the License.
  */
 
-include ":download-manager", "downloader", ":sample"
+include "download-manager", ":sample"

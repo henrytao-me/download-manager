@@ -111,8 +111,7 @@ dependencies {
 
   compile rootProject.ext.sampleDependencies["com.facebook.stetho:stetho"]
 
-  // compile project(":download-manager")
-  compile project(":downloader")
+   compile project(":download-manager")
 
   testCompile rootProject.ext.sampleDependencies["junit:junit"]
 }

@@ -21,214 +21,151 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Locale;
 
-import me.henrytao.downloadmanager.config.Constants;
-import me.henrytao.downloadmanager.utils.FileUtils;
-import me.henrytao.downloadmanager.utils.StringUtils;
+import me.henrytao.downloadmanager.DownloadManager;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import okhttp3.ResponseBody;
 
 /**
- * Created by henrytao on 7/26/16.
+ * Created by henrytao on 12/13/16.
  */
+
 public class Downloader {
 
-  public static Downloader create(String url, String destPath, String destName, String tempPath, String tempName,
-      OnStartDownloadListener onStartDownloadListener, OnDownloadingListener onDownloadingListener,
-      OnDownloadedListener onDownloadedListener) {
-    return new Downloader(url, destPath, destName, tempPath, tempName, onStartDownloadListener, onDownloadingListener,
-        onDownloadedListener);
+  private static final int REQUESTED_RANGE_NOT_SATISFIABLE = 416;
+
+  private static DownloadManager.Config getConfig() {
+    return DownloadManager.getInstance().getConfig();
   }
 
-  private final String mDestName;
+  private final Bus mBus;
 
-  private final String mDestPath;
+  private final OkHttpClient mClient;
 
-  private final OnDownloadedListener mOnDownloadedListener;
+  private final Storage mStorage;
 
-  private final String mTempName;
-
-  private final String mTempPath;
-
-  private final String mUrl;
-
-  private OkHttpClient mClient;
-
-  private boolean mIsClosed;
-
-  private boolean mIsInterrupted;
-
-  private OnDownloadingListener mOnDownloadingListener;
-
-  private OnStartDownloadListener mOnStartDownloadListener;
-
-  protected Downloader(String url, String destPath, String destName, String tempPath, String tempName,
-      OnStartDownloadListener onStartDownloadListener, OnDownloadingListener onDownloadingListener,
-      OnDownloadedListener onDownloadedListener) {
-    mUrl = url;
-    mDestPath = destPath;
-    mDestName = destName;
-    mTempPath = tempPath;
-    mTempName = tempName;
-    mOnStartDownloadListener = onStartDownloadListener;
-    mOnDownloadingListener = onDownloadingListener;
-    mOnDownloadedListener = onDownloadedListener;
+  public Downloader(Storage storage, Bus bus) {
+    mStorage = storage;
+    mBus = bus;
     mClient = new OkHttpClient.Builder().build();
   }
 
-  public void close() {
-    mIsClosed = true;
-    mClient = null;
-    mOnStartDownloadListener = null;
-    mOnDownloadingListener = null;
-  }
+  public void download(Task task) throws IOException {
+    if (task == null || !task.isActive()) {
+      // return without exception to finish job
+      return;
+    }
 
-  public void download() throws IOException {
-    Triple<File, Long, Response> executor = execute();
-    File file = executor.first;
-    long bytesRead = executor.second;
-    Response response = executor.third;
+    mBus.queueing(task.getId());
 
-    // read response
-    String md5 = response.header("ETag");
-    ResponseBody responseBody = response.body();
-    IOException exception = null;
+    ResponseInfo response = null;
     InputStream input = null;
     OutputStream output = null;
-    long contentLength = responseBody.contentLength() + bytesRead;
     try {
-      input = responseBody.byteStream();
-      output = new FileOutputStream(file, bytesRead != 0);
+      response = initResponse(task);
 
-      byte data[] = new byte[Constants.BUFFER_SIZE];
+      long bytesRead = response.bytesRead;
+      if (bytesRead == 0) {
+        mStorage.update(task.getId(), response.contentLength, response.md5);
+      }
+      mBus.downloading(task.getId(), bytesRead);
+
+      input = response.response.body().byteStream();
+      output = new FileOutputStream(response.file, bytesRead != 0);
+      byte data[] = new byte[getConfig().bufferSize];
       int count;
-
-      if (!isCancelling()) {
-        onStartDownload(bytesRead, contentLength);
+      if (!isCanceled(task.getId())) {
         while ((count = input.read(data)) != -1) {
-          if (isCancelling()) {
-            break;
-          }
           bytesRead += count;
           output.write(data, 0, count);
-          onDownloading(bytesRead, contentLength);
+          mBus.downloading(task.getId(), bytesRead);
+          if (isCanceled(task.getId())) {
+            break;
+          }
         }
       }
-    } catch (IOException ex) {
-      exception = ex;
+    } catch (Exception exception) {
+      // increase retry count and forward exception
+      mStorage.increaseRetryCount(task.getId());
+      throw exception;
     } finally {
-      response.close();
+      if (response != null && response.response != null) {
+        response.response.close();
+      }
       if (input != null) {
+        //noinspection ThrowFromFinallyBlock
         input.close();
       }
       if (output != null) {
-        output.flush();
+        //noinspection ThrowFromFinallyBlock
         output.close();
       }
     }
-    if (exception != null) {
-      throw exception;
-    }
-    if (bytesRead == contentLength) {
-      String fileMd5 = FileUtils.getMd5(getTempFile());
-      if (fileMd5 == null || md5 == null || StringUtils.equals(md5.toLowerCase().replaceAll("\"", ""), fileMd5.replaceAll("\"", ""))) {
-        onDownloaded(contentLength);
+
+    if (!isCanceled(task.getId())) {
+      mBus.downloaded(task.getId());
+      // get latest task info
+      task = mStorage.find(task.getId());
+      mBus.validating(task.getId());
+      if (FileUtils.matchMd5(task.getTempFile(), task.getMd5())) {
+        FileUtils.move(task.getTempFile(), task.getDestFile(), true);
+        mStorage.update(task.getId(), Task.State.SUCCESS);
+        mBus.succeed(task.getId());
       } else {
-        FileUtils.delete(getTempFile());
-        download();
+        FileUtils.delete(task.getTempFile());
+        mBus.failed(task.getId());
+        throw new IllegalStateException(String.format(Locale.US, "Mismatch md5 for task %d", task.getId()));
       }
+    } else {
+      mBus.pausing(task.getId());
     }
   }
 
-  public void interrupt() {
-    mIsInterrupted = true;
-  }
-
-  public boolean isInterrupted() {
-    return mIsInterrupted;
-  }
-
-  private Triple<File, Long, Response> execute() throws IOException {
-    File file = getTempFile();
-    long bytesRead = file.exists() ? file.length() : 0;
+  private ResponseInfo initResponse(Task task) throws IOException {
+    File file = task.getTempFile();
+    long bytesRead = task.getBytesRead();
     Request request = new Request.Builder()
-        .url(mUrl)
+        .url(task.getUri().toString())
         .addHeader("Range", "bytes=" + bytesRead + "-")
         .build();
     Response response = mClient.newCall(request).execute();
     if (!response.isSuccessful()) {
-      if (response.code() == Constants.Exception.REQUESTED_RANGE_NOT_SATISFIABLE) {
+      if (response.code() == REQUESTED_RANGE_NOT_SATISFIABLE) {
         response.close();
         FileUtils.delete(file);
-        return execute();
+        return initResponse(task);
       } else {
         throw new IOException("Unexpected code " + response);
       }
     }
-    return new Triple<>(file, bytesRead, response);
+    return new ResponseInfo(file, response, response.header("ETag"), bytesRead + response.body().contentLength(), bytesRead);
   }
 
-  private File getDestFile() {
-    return FileUtils.getFile(mDestPath, mDestName);
+  private boolean isCanceled(long id) {
+    Task task = mStorage.find(id);
+    return task == null || !task.isActive();
   }
 
-  private File getTempFile() throws IllegalStateException {
-    return FileUtils.getFile(mTempPath, mTempName);
-  }
+  private static class ResponseInfo {
 
-  private boolean isCancelling() {
-    return mIsInterrupted || mIsClosed;
-  }
+    private final long bytesRead;
 
-  private void onDownloaded(long contentLength) throws IOException {
-    FileUtils.copy(getTempFile(), getDestFile());
-    FileUtils.delete(getTempFile());
-    if (mOnDownloadedListener != null) {
-      mOnDownloadedListener.onDownloaded(contentLength);
-    }
-  }
+    private final long contentLength;
 
-  private void onDownloading(long bytesRead, long contentLength) {
-    if (mOnDownloadingListener != null) {
-      mOnDownloadingListener.onDownloading(bytesRead, contentLength);
-    }
-  }
+    private final File file;
 
-  private void onStartDownload(long bytesRead, long contentLength) {
-    if (mOnStartDownloadListener != null) {
-      mOnStartDownloadListener.onStartDownload(bytesRead, contentLength);
-    }
-  }
+    private final String md5;
 
-  public interface OnDownloadedListener {
+    private final Response response;
 
-    void onDownloaded(long contentLength);
-  }
-
-  public interface OnDownloadingListener {
-
-    void onDownloading(long bytesRead, long contentLength);
-  }
-
-  public interface OnStartDownloadListener {
-
-    void onStartDownload(long bytesRead, long contentLength);
-  }
-
-  protected static class Triple<F, S, T> {
-
-    public final F first;
-
-    public final S second;
-
-    public final T third;
-
-    protected Triple(F first, S second, T third) {
-      this.first = first;
-      this.second = second;
-      this.third = third;
+    ResponseInfo(File file, Response response, String md5, long contentLength, long bytesRead) {
+      this.file = file;
+      this.response = response;
+      this.md5 = md5;
+      this.contentLength = contentLength;
+      this.bytesRead = bytesRead;
     }
   }
 }
