@@ -25,6 +25,7 @@ import me.henrytao.downloadmanager.internal.Downloader;
 import me.henrytao.downloadmanager.internal.JobService;
 import me.henrytao.downloadmanager.internal.Logger;
 import me.henrytao.downloadmanager.internal.Storage;
+import me.henrytao.downloadmanager.internal.Task;
 import rx.Observable;
 
 /**
@@ -88,7 +89,7 @@ public final class DownloadManager {
     }
     request.setId(mStorage.getNextTaskId());
     mStorage.enqueue(request);
-    mJobService.enqueue(request);
+    mJobService.enqueue(request.getId());
     return request.getId();
   }
 
@@ -98,5 +99,16 @@ public final class DownloadManager {
 
   public Observable<Info> observe(long id) {
     return mBus.observe(id);
+  }
+
+  public void pause(long id) {
+    mJobService.stop(id);
+    mStorage.update(id, Task.State.IN_ACTIVE);
+  }
+
+  public void resume(long id) {
+    mJobService.stop(id);
+    mStorage.update(id, Task.State.ACTIVE);
+    mJobService.enqueue(id);
   }
 }
