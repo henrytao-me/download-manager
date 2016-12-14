@@ -44,8 +44,34 @@ public final class Info extends Task {
   }
 
   @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    Info info = (Info) o;
+    if (bytesRead != info.bytesRead) {
+      return false;
+    }
+    return status == info.status;
+  }
+
+  @Override
   public long getBytesRead() {
     return getBytesRead(false);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = super.hashCode();
+    result = 31 * result + (int) (bytesRead ^ (bytesRead >>> 32));
+    result = 31 * result + (status != null ? status.hashCode() : 0);
+    return result;
   }
 
   public long getBytesRead(boolean force) {
@@ -82,6 +108,11 @@ public final class Info extends Task {
 
     Status(int value) {
       mValue = value;
+    }
+
+    @Override
+    public String toString() {
+      return name();
     }
 
     public int toInt() {

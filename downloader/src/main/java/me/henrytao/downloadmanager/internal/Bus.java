@@ -21,6 +21,7 @@ import android.support.v4.util.LongSparseArray;
 
 import java.util.Locale;
 
+import me.henrytao.downloadmanager.DownloadManager;
 import me.henrytao.downloadmanager.Info;
 import rx.Observable;
 import rx.subjects.PublishSubject;
@@ -30,6 +31,10 @@ import rx.subjects.PublishSubject;
  */
 
 public class Bus {
+
+  private static Logger log() {
+    return DownloadManager.getInstance().getLogger();
+  }
 
   private final Storage mStorage;
 
@@ -111,6 +116,7 @@ public class Bus {
   private void onNext(long id, Info info) {
     if (info != null) {
       get(id).onNext(info);
+      log().i("Bus | onNext | %s | contentLength %d | bytesRead %d", info.getStatus(), info.getContentLength(), info.getBytesRead());
     }
   }
 }

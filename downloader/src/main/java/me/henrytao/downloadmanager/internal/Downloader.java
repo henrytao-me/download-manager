@@ -107,7 +107,7 @@ public class Downloader {
       task = mStorage.find(task.getId());
       mBus.validating(task.getId());
       if (FileUtils.matchMd5(task.getTempFile(), task.getMd5())) {
-        FileUtils.move(task.getTempFile(), task.getDestFile());
+        FileUtils.move(task.getTempFile(), task.getDestFile(), true);
         mStorage.update(task.getId(), Task.State.SUCCESS);
         mBus.succeed(task.getId());
       } else {

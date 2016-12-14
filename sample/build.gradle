@@ -94,6 +94,8 @@ dependencies {
 
   compile rootProject.ext.dependencies["com.evernote:android-job"]
 
+  compile rootProject.ext.sampleDependencies["com.tbruyelle.rxpermissions:rxpermissions"]
+
   compile(rootProject.ext.sampleDependencies["me.henrytao:mdcore"]) {
     exclude group: "com.android.support"
   }
@@ -109,7 +111,8 @@ dependencies {
 
   compile rootProject.ext.sampleDependencies["com.facebook.stetho:stetho"]
 
-  compile project(":download-manager")
+  // compile project(":download-manager")
+  compile project(":downloader")
 
   testCompile rootProject.ext.sampleDependencies["junit:junit"]
 }

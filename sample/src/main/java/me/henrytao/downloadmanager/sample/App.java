@@ -16,14 +16,12 @@
 
 package me.henrytao.downloadmanager.sample;
 
-import com.evernote.android.job.JobManager;
 import com.facebook.stetho.Stetho;
 
 import android.app.Application;
 import android.content.Context;
 
 import me.henrytao.downloadmanager.DownloadManager;
-import me.henrytao.downloadmanager.sample.ui.home.HomeViewModel;
 
 /**
  * Created by henrytao on 6/17/16.
@@ -44,7 +42,6 @@ public class App extends Application {
     Stetho.initializeWithDefaults(this);
 
     DownloadManager.DEBUG = true;
-
-    JobManager.create(App.getInstance()).addJobCreator(new HomeViewModel.DemoJobCreator());
+    DownloadManager.create(this);
   }
 }

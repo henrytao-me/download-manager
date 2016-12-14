@@ -17,11 +17,14 @@
 package me.henrytao.downloadmanager.internal;
 
 import android.net.Uri;
+import android.support.annotation.NonNull;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.FileChannel;
 import java.security.MessageDigest;
 
 /**
@@ -34,11 +37,10 @@ class FileUtils {
     return file == null || (file.exists() && file.delete());
   }
 
-  public static File getFile(Uri uri) throws IOException {
-    File file = new File(uri.toString());
-    if (!file.exists() && !file.mkdirs()) {
-      throw new IOException("Could not create directory");
-    }
+  @SuppressWarnings("ResultOfMethodCallIgnored")
+  public static File getFile(Uri uri) {
+    File file = new File(uri.getPath());
+    file.getParentFile().mkdirs();
     return file;
   }
 
@@ -74,13 +76,70 @@ class FileUtils {
     return fileMd5 != null && md5 != null && fileMd5.toLowerCase().replaceAll("\"", "").equals(md5.toLowerCase().replaceAll("\"", ""));
   }
 
-  public static boolean move(File input, File output) throws IOException {
-    if (input == null || output == null) {
+  @SuppressWarnings({"ResultOfMethodCallIgnored"})
+  public static void move(File input, File output, boolean autoRename) throws IOException {
+    if (input == null || !input.exists() || output == null) {
       throw new IllegalArgumentException("Input and Output files can not be null");
     }
-    if (!output.mkdirs()) {
-      throw new IOException("Could not create output directory");
+    output.getParentFile().mkdirs();
+    if (output.exists() && autoRename) {
+      output = autoRenameIfExists(output);
     }
-    return input.renameTo(output);
+    FileChannel inputChannel = null;
+    FileChannel outputChannel = null;
+    try {
+      inputChannel = new FileInputStream(input).getChannel();
+      outputChannel = new FileOutputStream(output).getChannel();
+      inputChannel.transferTo(0, inputChannel.size(), outputChannel);
+      inputChannel.close();
+      input.delete();
+    } finally {
+      if (inputChannel != null) {
+        //noinspection ThrowFromFinallyBlock
+        inputChannel.close();
+      }
+      if (outputChannel != null) {
+        //noinspection ThrowFromFinallyBlock
+        outputChannel.close();
+      }
+    }
+  }
+
+  private static File autoRenameIfExists(File file) {
+    if (!file.exists()) {
+      return file;
+    }
+    File parent = file.getParentFile();
+    String name = getFilenameWithoutExtension(file);
+    String extension = getFileExtension(file);
+    int i = 1;
+    while (true) {
+      file = new File(parent, name + "_" + i + "." + extension);
+      if (!file.exists()) {
+        break;
+      }
+      i += 1;
+    }
+    return file;
+  }
+
+  @NonNull
+  private static String getFileExtension(File file) {
+    try {
+      String name = file.getName();
+      return name.substring(name.lastIndexOf(".") + 1);
+    } catch (Exception ignore) {
+    }
+    return "";
+  }
+
+  @NonNull
+  private static String getFilenameWithoutExtension(File file) {
+    try {
+      String name = file.getName();
+      return name.substring(0, name.lastIndexOf("."));
+    } catch (Exception ignore) {
+    }
+    return "";
   }
 }

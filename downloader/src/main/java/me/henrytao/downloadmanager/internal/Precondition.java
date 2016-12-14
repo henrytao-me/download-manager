@@ -34,7 +34,7 @@ public final class Precondition {
   public static <T extends CharSequence> T checkNotEmpty(final T reference, final T defValue) {
     try {
       return checkNotEmpty(reference);
-    } catch (IllegalArgumentException ignore) {
+    } catch (IllegalArgumentException | NullPointerException ignore) {
     }
     return defValue;
   }
