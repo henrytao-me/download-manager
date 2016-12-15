@@ -23,7 +23,6 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.support.annotation.NonNull;
 import android.support.v4.util.LruCache;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -111,8 +110,10 @@ public class Storage {
     }
   }
 
-  private void addToCache(@NonNull Task task) {
-    mTaskCache.put(task.getId(), task);
+  private void addToCache(Task task) {
+    if (task != null) {
+      mTaskCache.put(task.getId(), task);
+    }
   }
 
   private void updateCache(long id) {
