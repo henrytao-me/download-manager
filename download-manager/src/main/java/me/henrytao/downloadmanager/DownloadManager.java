@@ -130,12 +130,14 @@ public final class DownloadManager {
   public void pause(long id) {
     mJobService.stop(id);
     mStorage.update(id, Task.State.IN_ACTIVE);
+    mBus.pausing(id);
   }
 
   public void resume(long id) {
     mJobService.stop(id);
     mStorage.update(id, Task.State.ACTIVE);
     mJobService.enqueue(id);
+    mBus.queueing(id);
   }
 
   public static class Config {
