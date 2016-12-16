@@ -22,7 +22,6 @@ import android.net.Uri;
 import android.util.SparseArray;
 
 import java.io.File;
-import java.io.IOException;
 
 import me.henrytao.downloadmanager.Request;
 
@@ -162,12 +161,12 @@ public class Task {
 
   public long getBytesRead() {
     try {
-      File file = getTempFile();
-      return file.exists() ? file.length() : 0;
+      File tempFile = getTempFile();
+      File destFile = getDestFile();
+      return getState() == State.SUCCESS && destFile.exists() ? destFile.length() : (tempFile.exists() ? tempFile.length() : 0);
     } catch (Exception ignore) {
     }
     return 0;
-
   }
 
   public long getContentLength() {
@@ -178,7 +177,7 @@ public class Task {
     return mDescription;
   }
 
-  public File getDestFile() throws IOException {
+  public File getDestFile() {
     return FileUtils.getFile(getDestUri());
   }
 
@@ -210,7 +209,7 @@ public class Task {
     return mTag;
   }
 
-  public File getTempFile() throws IOException {
+  public File getTempFile() {
     return FileUtils.getFile(getTempUri());
   }
 
