@@ -163,8 +163,7 @@ public class Task {
     try {
       File tempFile = getTempFile();
       File destFile = getDestFile();
-      long bytesRead = getState() == State.SUCCESS && destFile.exists() ? destFile.length() : (tempFile.exists() ? tempFile.length() : 0);
-
+      return getState() == State.SUCCESS && destFile.exists() ? destFile.length() : (tempFile.exists() ? tempFile.length() : 0);
     } catch (Exception ignore) {
     }
     return 0;
