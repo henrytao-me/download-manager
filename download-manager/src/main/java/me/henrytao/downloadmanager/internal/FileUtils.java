@@ -77,7 +77,7 @@ class FileUtils {
   }
 
   @SuppressWarnings({"ResultOfMethodCallIgnored"})
-  public static void move(File input, File output, boolean autoRename) throws IOException {
+  public static File move(File input, File output, boolean autoRename) throws IOException {
     if (input == null || !input.exists() || output == null) {
       throw new IllegalArgumentException("Input and Output files can not be null");
     }
@@ -103,6 +103,7 @@ class FileUtils {
         outputChannel.close();
       }
     }
+    return output;
   }
 
   private static File autoRenameIfExists(File file) {

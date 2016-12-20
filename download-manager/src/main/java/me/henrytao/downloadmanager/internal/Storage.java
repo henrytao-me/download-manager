@@ -23,6 +23,7 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.net.Uri;
 import android.support.v4.util.LruCache;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -106,6 +107,12 @@ public class Storage {
 
   public void update(long id, Task.State state) {
     if (mDbHelper.update(id, state)) {
+      updateCache(id);
+    }
+  }
+
+  public void update(long id, Uri destUri) {
+    if (mDbHelper.update(id, destUri)) {
       updateCache(id);
     }
   }
@@ -212,6 +219,18 @@ public class Storage {
         db().delete(Task.NAME, Task.Fields.ID + " = ?", new String[]{String.valueOf(id)});
       } catch (Exception e) {
         log().e(e, "Could not delete task %d", id);
+        return false;
+      }
+      return true;
+    }
+
+    boolean update(long id, Uri destUri) {
+      try {
+        ContentValues values = new ContentValues();
+        values.put(Task.Fields.DEST_URI, destUri.toString());
+        db().update(Task.NAME, values, Task.Fields.ID + " = ?", new String[]{String.valueOf(id)});
+      } catch (Exception e) {
+        log().e(e, "Could not update destUri of id %d", id);
         return false;
       }
       return true;

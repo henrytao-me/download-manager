@@ -16,6 +16,8 @@
 
 package me.henrytao.downloadmanager.internal;
 
+import android.net.Uri;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -65,24 +67,25 @@ public class Downloader {
     OutputStream output = null;
     try {
       response = initResponse(task);
+      if (response != null) {
+        long bytesRead = response.bytesRead;
+        if (bytesRead == 0) {
+          mStorage.update(task.getId(), response.contentLength, response.md5);
+        }
+        mBus.downloading(task.getId(), bytesRead);
 
-      long bytesRead = response.bytesRead;
-      if (bytesRead == 0) {
-        mStorage.update(task.getId(), response.contentLength, response.md5);
-      }
-      mBus.downloading(task.getId(), bytesRead);
-
-      input = response.response.body().byteStream();
-      output = new FileOutputStream(response.file, bytesRead != 0);
-      byte data[] = new byte[getConfig().bufferSize];
-      int count;
-      if (!isCanceled(task.getId())) {
-        while ((count = input.read(data)) != -1) {
-          bytesRead += count;
-          output.write(data, 0, count);
-          mBus.downloading(task.getId(), bytesRead);
-          if (isCanceled(task.getId())) {
-            break;
+        input = response.response.body().byteStream();
+        output = new FileOutputStream(response.file, bytesRead != 0);
+        byte data[] = new byte[getConfig().bufferSize];
+        int count;
+        if (!isCanceled(task.getId())) {
+          while ((count = input.read(data)) != -1) {
+            bytesRead += count;
+            output.write(data, 0, count);
+            mBus.downloading(task.getId(), bytesRead);
+            if (isCanceled(task.getId())) {
+              break;
+            }
           }
         }
       }
@@ -110,7 +113,8 @@ public class Downloader {
       task = mStorage.find(task.getId());
       mBus.validating(task.getId());
       if (FileUtils.matchMd5(task.getTempFile(), task.getMd5())) {
-        FileUtils.move(task.getTempFile(), task.getDestFile(), true);
+        File renamedOutputFile = FileUtils.move(task.getTempFile(), task.getDestFile(), true);
+        mStorage.update(task.getId(), Uri.fromFile(renamedOutputFile));
         mStorage.update(task.getId(), Task.State.SUCCESS);
         mBus.succeed(task.getId());
       } else {
@@ -126,6 +130,9 @@ public class Downloader {
   private ResponseInfo initResponse(Task task) throws IOException {
     File file = task.getTempFile();
     long bytesRead = task.getBytesRead();
+    if (bytesRead == task.getContentLength() && task.getContentLength() > 0 && FileUtils.matchMd5(file, task.getMd5())) {
+      return new ResponseInfo(file, null, task.getMd5(), task.getContentLength(), bytesRead);
+    }
     Request request = new Request.Builder()
         .url(task.getUri().toString())
         .addHeader("Range", "bytes=" + bytesRead + "-")
