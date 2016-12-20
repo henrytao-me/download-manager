@@ -163,7 +163,8 @@ public class Task {
     try {
       File tempFile = getTempFile();
       File destFile = getDestFile();
-      return getState() == State.SUCCESS && destFile.exists() ? destFile.length() : (tempFile.exists() ? tempFile.length() : 0);
+      long bytesRead = getState() == State.SUCCESS && destFile.exists() ? destFile.length() : (tempFile.exists() ? tempFile.length() : 0);
+
     } catch (Exception ignore) {
     }
     return 0;
@@ -226,7 +227,7 @@ public class Task {
   }
 
   public boolean isActive() {
-    return getState() == State.ACTIVE || getState() == State.SUCCESS;
+    return getState() == State.ACTIVE;
   }
 
   public boolean isForced() {

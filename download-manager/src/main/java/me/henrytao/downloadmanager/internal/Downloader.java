@@ -113,9 +113,9 @@ public class Downloader {
       task = mStorage.find(task.getId());
       mBus.validating(task.getId());
       if (FileUtils.matchMd5(task.getTempFile(), task.getMd5())) {
-        mStorage.update(task.getId(), Task.State.SUCCESS);
         File renamedOutputFile = FileUtils.move(task.getTempFile(), task.getDestFile(), true);
         mStorage.update(task.getId(), Uri.fromFile(renamedOutputFile));
+        mStorage.update(task.getId(), Task.State.SUCCESS);
         mBus.succeed(task.getId());
       } else {
         mStorage.update(task.getId(), Task.State.ACTIVE);
@@ -130,8 +130,9 @@ public class Downloader {
 
   private ResponseInfo initResponse(Task task) throws IOException {
     File file = task.getTempFile();
+    long contentLength = task.getContentLength();
     long bytesRead = task.getBytesRead();
-    if (task.getState() == Task.State.SUCCESS) {
+    if (bytesRead == contentLength && contentLength > 0 && FileUtils.matchMd5(file, task.getMd5())) {
       return new ResponseInfo(file, null, task.getMd5(), task.getContentLength(), bytesRead);
     }
     Request request = new Request.Builder()
