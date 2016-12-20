@@ -67,7 +67,7 @@ public class Downloader {
     OutputStream output = null;
     try {
       response = initResponse(task);
-      if (response != null) {
+      if (response.response != null) {
         long bytesRead = response.bytesRead;
         if (bytesRead == 0) {
           mStorage.update(task.getId(), response.contentLength, response.md5);
