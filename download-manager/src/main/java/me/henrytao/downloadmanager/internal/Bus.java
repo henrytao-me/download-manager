@@ -19,8 +19,6 @@ package me.henrytao.downloadmanager.internal;
 import android.support.annotation.NonNull;
 import android.support.v4.util.LongSparseArray;
 
-import java.util.Locale;
-
 import me.henrytao.downloadmanager.DownloadManager;
 import me.henrytao.downloadmanager.Info;
 import rx.Observable;
@@ -61,7 +59,7 @@ public class Bus {
         Observable.create(subscriber -> {
           Task task = mStorage.find(id);
           if (task == null) {
-            SubscriptionUtils.onError(subscriber, new IllegalArgumentException(String.format(Locale.US, "Could not found task %d", id)));
+            SubscriptionUtils.onComplete(subscriber);
             return;
           }
           switch (task.getState()) {
