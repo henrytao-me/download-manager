@@ -226,7 +226,7 @@ public class Task {
   }
 
   public boolean isActive() {
-    return getState() == State.ACTIVE;
+    return getState() == State.ACTIVE || getState() == State.SUCCESS;
   }
 
   public boolean isForced() {

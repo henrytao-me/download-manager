@@ -113,11 +113,12 @@ public class Downloader {
       task = mStorage.find(task.getId());
       mBus.validating(task.getId());
       if (FileUtils.matchMd5(task.getTempFile(), task.getMd5())) {
+        mStorage.update(task.getId(), Task.State.SUCCESS);
         File renamedOutputFile = FileUtils.move(task.getTempFile(), task.getDestFile(), true);
         mStorage.update(task.getId(), Uri.fromFile(renamedOutputFile));
-        mStorage.update(task.getId(), Task.State.SUCCESS);
         mBus.succeed(task.getId());
       } else {
+        mStorage.update(task.getId(), Task.State.ACTIVE);
         FileUtils.delete(task.getTempFile());
         mBus.failed(task.getId());
         throw new IllegalStateException(String.format(Locale.US, "Mismatch md5 for task %d", task.getId()));
@@ -130,7 +131,7 @@ public class Downloader {
   private ResponseInfo initResponse(Task task) throws IOException {
     File file = task.getTempFile();
     long bytesRead = task.getBytesRead();
-    if (bytesRead == task.getContentLength() && task.getContentLength() > 0 && FileUtils.matchMd5(file, task.getMd5())) {
+    if (task.getState() == Task.State.SUCCESS) {
       return new ResponseInfo(file, null, task.getMd5(), task.getContentLength(), bytesRead);
     }
     Request request = new Request.Builder()
