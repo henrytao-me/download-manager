@@ -35,7 +35,7 @@ import rx.Observable;
  * Created by henrytao on 12/12/16.
  */
 
-public final class DownloadManager {
+public class DownloadManager {
 
   private static final long DEFAULT_BACKOFF_IN_MILLISECONDS = 2000;
 
