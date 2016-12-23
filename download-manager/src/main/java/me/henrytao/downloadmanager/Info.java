@@ -23,7 +23,7 @@ import me.henrytao.downloadmanager.internal.Task;
 /**
  * Created by henrytao on 7/27/16.
  */
-public final class Info extends Task {
+public class Info extends Task {
 
   public static Info create(Task task, long bytesRead, Status status) {
     if (task == null) {

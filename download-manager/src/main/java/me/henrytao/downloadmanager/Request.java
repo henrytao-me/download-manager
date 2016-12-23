@@ -27,7 +27,7 @@ import me.henrytao.downloadmanager.internal.Precondition;
  * Created by henrytao on 12/12/16.
  */
 
-public final class Request {
+public class Request {
 
   private static final int DEFAULT_RETRY = 30;
 
