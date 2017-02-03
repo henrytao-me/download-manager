@@ -26,6 +26,8 @@ import java.io.OutputStream;
 import java.util.Locale;
 
 import me.henrytao.downloadmanager.DownloadManager;
+import me.henrytao.downloadmanager.Info;
+import me.henrytao.downloadmanager.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -115,6 +117,12 @@ public class Downloader {
       if (FileUtils.matchMd5(task.getTempFile(), task.getMd5())) {
         File renamedOutputFile = FileUtils.move(task.getTempFile(), task.getDestFile(), true);
         mStorage.update(task.getId(), Uri.fromFile(renamedOutputFile));
+        // get latest task info and call interceptors
+        task = mStorage.find(task.getId());
+        for (Interceptor interceptor : DownloadManager.getInstance().getConfig().interceptors) {
+          interceptor.onDownloadSuccess(Info.create(task, task.getContentLength(), Info.Status.DOWNLOADED));
+        }
+        // on download success
         mStorage.update(task.getId(), Task.State.SUCCESS);
         mBus.succeed(task.getId());
       } else {

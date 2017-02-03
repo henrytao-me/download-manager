@@ -22,6 +22,7 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import me.henrytao.downloadmanager.internal.Bus;
@@ -181,19 +182,25 @@ public class DownloadManager {
 
     public final long executionWindowStartInMilliseconds;
 
+    @NonNull
+    public final List<Interceptor> interceptors;
+
     public final boolean persisted;
 
     private Config(long executionWindowStartInMilliseconds, long executionWindowEndInMilliseconds, long backoffInMilliseconds,
-        JobRequest.BackoffPolicy backoffPolicy, boolean persisted, int bufferSize) {
+        JobRequest.BackoffPolicy backoffPolicy, boolean persisted, int bufferSize, @NonNull List<Interceptor> interceptors) {
       this.executionWindowStartInMilliseconds = executionWindowStartInMilliseconds;
       this.executionWindowEndInMilliseconds = executionWindowEndInMilliseconds;
       this.backoffInMilliseconds = backoffInMilliseconds;
       this.backoffPolicy = backoffPolicy;
       this.persisted = persisted;
       this.bufferSize = bufferSize;
+      this.interceptors = interceptors;
     }
 
     public static class Builder {
+
+      private final List<Interceptor> mInterceptors;
 
       private long mBackoffInMilliseconds;
 
@@ -214,11 +221,17 @@ public class DownloadManager {
         mBackoffPolicy = DEFAULT_BACKOFF_POLICY;
         mPersisted = DEFAULT_PERSISTED;
         mBufferSize = DEFAULT_BUFFER_SIZE;
+        mInterceptors = new ArrayList<>();
+      }
+
+      public Builder addInterceptor(Interceptor interceptor) {
+        mInterceptors.add(interceptor);
+        return this;
       }
 
       public Config build() {
         return new Config(mExecutionWindowStartInMilliseconds, mExecutionWindowEndInMilliseconds, mBackoffInMilliseconds, mBackoffPolicy,
-            mPersisted, mBufferSize);
+            mPersisted, mBufferSize, mInterceptors);
       }
 
       public Builder setBackoffInMilliseconds(long backoffInMilliseconds) {

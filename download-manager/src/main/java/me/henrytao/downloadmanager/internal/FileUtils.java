@@ -81,26 +81,28 @@ class FileUtils {
     if (input == null || !input.exists() || output == null) {
       throw new IllegalArgumentException("Input and Output files can not be null");
     }
-    output.getParentFile().mkdirs();
-    if (output.exists() && autoRename) {
-      output = autoRenameIfExists(output);
-    }
-    FileChannel inputChannel = null;
-    FileChannel outputChannel = null;
-    try {
-      inputChannel = new FileInputStream(input).getChannel();
-      outputChannel = new FileOutputStream(output).getChannel();
-      inputChannel.transferTo(0, inputChannel.size(), outputChannel);
-      inputChannel.close();
-      input.delete();
-    } finally {
-      if (inputChannel != null) {
-        //noinspection ThrowFromFinallyBlock
-        inputChannel.close();
+    if (!input.equals(output)) {
+      output.getParentFile().mkdirs();
+      if (output.exists() && autoRename) {
+        output = autoRenameIfExists(output);
       }
-      if (outputChannel != null) {
-        //noinspection ThrowFromFinallyBlock
-        outputChannel.close();
+      FileChannel inputChannel = null;
+      FileChannel outputChannel = null;
+      try {
+        inputChannel = new FileInputStream(input).getChannel();
+        outputChannel = new FileOutputStream(output).getChannel();
+        inputChannel.transferTo(0, inputChannel.size(), outputChannel);
+        inputChannel.close();
+        input.delete();
+      } finally {
+        if (inputChannel != null) {
+          //noinspection ThrowFromFinallyBlock
+          inputChannel.close();
+        }
+        if (outputChannel != null) {
+          //noinspection ThrowFromFinallyBlock
+          outputChannel.close();
+        }
       }
     }
     return output;

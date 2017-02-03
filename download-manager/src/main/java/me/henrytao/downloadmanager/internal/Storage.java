@@ -78,7 +78,6 @@ public class Storage {
     }
   }
 
-  @Nullable
   public synchronized Task find(long id) {
     return mTaskCache.get(id);
   }
