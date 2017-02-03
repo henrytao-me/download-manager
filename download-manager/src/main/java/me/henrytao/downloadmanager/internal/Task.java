@@ -32,8 +32,8 @@ public class Task {
 
   static final String NAME = "task";
 
-  static Task create(Cursor cursor) {
-    if (cursor == null || cursor.isClosed() || !cursor.moveToFirst()) {
+  static Task create(Cursor cursor, boolean shouldMoveToFirst) {
+    if (cursor == null || cursor.isClosed() || (shouldMoveToFirst && !cursor.moveToFirst())) {
       return null;
     }
     return new Task(

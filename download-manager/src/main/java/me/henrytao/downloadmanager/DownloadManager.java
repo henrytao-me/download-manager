@@ -22,6 +22,7 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 
 import java.io.IOException;
+import java.util.List;
 
 import me.henrytao.downloadmanager.internal.Bus;
 import me.henrytao.downloadmanager.internal.Downloader;
@@ -123,6 +124,20 @@ public class DownloadManager {
     return mLogger;
   }
 
+  public Observable<Boolean> isEnqueued(String tag) {
+    return Observable.fromCallable(() -> mStorage.find(tag) != null);
+  }
+
+  public Observable<Info> observe(String tag) {
+    return Observable.fromCallable(() -> mStorage.find(tag))
+        .flatMap(task -> {
+          if (task == null) {
+            return Observable.error(new NullPointerException("Task with tag %s not found"));
+          }
+          return observe(task.getId());
+        });
+  }
+
   public Observable<Info> observe(long id) {
     return mBus.observe(id);
   }
@@ -133,11 +148,25 @@ public class DownloadManager {
     mBus.pausing(id);
   }
 
+  public void pause(String tag) {
+    List<Task> tasks = mStorage.findAll(tag);
+    for (Task task : tasks) {
+      pause(task.getId());
+    }
+  }
+
   public void resume(long id) {
     mJobService.stop(id);
     mStorage.update(id, Task.State.ACTIVE);
     mJobService.enqueue(id);
     mBus.queueing(id);
+  }
+
+  public void resume(String tag) {
+    Task task = mStorage.find(tag);
+    if (task != null) {
+      resume(task.getId());
+    }
   }
 
   public static class Config {

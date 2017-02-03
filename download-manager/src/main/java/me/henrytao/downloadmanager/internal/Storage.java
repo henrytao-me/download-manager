@@ -24,8 +24,12 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.net.Uri;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.util.LruCache;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import me.henrytao.downloadmanager.DownloadManager;
@@ -74,8 +78,19 @@ public class Storage {
     }
   }
 
+  @Nullable
   public synchronized Task find(long id) {
     return mTaskCache.get(id);
+  }
+
+  @Nullable
+  public synchronized Task find(String tag) {
+    return mDbHelper.find(tag);
+  }
+
+  @NonNull
+  public synchronized List<Task> findAll(String tag) {
+    return mDbHelper.findAll(tag);
   }
 
   @SuppressLint("CommitPrefEdits")
@@ -165,12 +180,28 @@ public class Storage {
       // do nothing
     }
 
+    Task find(String tag) {
+      Task task = null;
+      Cursor cursor = null;
+      try {
+        cursor = db().query(Task.NAME, null, Task.Fields.TAG + " = ?", new String[]{tag}, null, null, Task.Fields.ID + " DESC");
+        task = Task.create(cursor, true);
+      } catch (Exception e) {
+        log().e(e, "Could not find tag %s", tag);
+      } finally {
+        if (cursor != null) {
+          cursor.close();
+        }
+      }
+      return task;
+    }
+
     Task find(long id) {
       Task task = null;
       Cursor cursor = null;
       try {
         cursor = db().query(Task.NAME, null, Task.Fields.ID + " = ?", new String[]{String.valueOf(id)}, null, null, null);
-        task = Task.create(cursor);
+        task = Task.create(cursor, true);
       } catch (Exception e) {
         log().e(e, "Could not find id %d", id);
       } finally {
@@ -179,6 +210,26 @@ public class Storage {
         }
       }
       return task;
+    }
+
+    List<Task> findAll(String tag) {
+      List<Task> tasks = new ArrayList<>();
+      Cursor cursor = null;
+      try {
+        cursor = db().query(Task.NAME, null, Task.Fields.TAG + " = ?", new String[]{tag}, null, null, Task.Fields.ID + " DESC");
+        if (cursor != null && !cursor.isClosed() && cursor.moveToFirst()) {
+          do {
+            tasks.add(Task.create(cursor, false));
+          } while (cursor.moveToNext());
+        }
+      } catch (Exception e) {
+        log().e(e, "Could not find tag %s", tag);
+      } finally {
+        if (cursor != null) {
+          cursor.close();
+        }
+      }
+      return tasks;
     }
 
     boolean increaseRetryCount(long id) {
