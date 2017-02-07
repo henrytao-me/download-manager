@@ -33,8 +33,22 @@ import java.security.MessageDigest;
 
 class FileUtils {
 
-  public static boolean delete(File file) {
-    return file == null || (file.exists() && file.delete());
+  public static void delete(File fileOrDirectory) {
+    if (fileOrDirectory == null || !fileOrDirectory.exists()) {
+      return;
+    }
+    if (fileOrDirectory.isDirectory()) {
+      for (File file : fileOrDirectory.listFiles()) {
+        delete(file);
+      }
+      if (!fileOrDirectory.delete()) {
+        fileOrDirectory.deleteOnExit();
+      }
+    } else {
+      if (!fileOrDirectory.delete()) {
+        fileOrDirectory.deleteOnExit();
+      }
+    }
   }
 
   @SuppressWarnings("ResultOfMethodCallIgnored")

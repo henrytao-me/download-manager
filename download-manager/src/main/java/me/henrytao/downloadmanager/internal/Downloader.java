@@ -23,6 +23,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.List;
 import java.util.Locale;
 
 import me.henrytao.downloadmanager.DownloadManager;
@@ -68,25 +69,41 @@ public class Downloader {
     InputStream input = null;
     OutputStream output = null;
     try {
-      response = initResponse(task);
-      if (response.response != null) {
-        long bytesRead = response.bytesRead;
-        if (bytesRead == 0) {
-          mStorage.update(task.getId(), response.contentLength, response.md5);
+      File interceptedFile = null;
+      Info info = Info.create(mStorage.find(task.getId()), 0, Info.Status.QUEUEING);
+      for (Interceptor interceptor : getInterceptors()) {
+        interceptedFile = interceptor.onQueueing(info);
+        if (interceptedFile != null) {
+          break;
         }
-        mBus.downloading(task.getId(), bytesRead);
+      }
+      if (interceptedFile != null) {
+        File file = task.getTempFile();
+        FileUtils.delete(file);
+        FileUtils.move(interceptedFile, file, true);
+        mStorage.update(task.getId(), file.length(), FileUtils.getMd5(file));
+        mBus.downloading(task.getId(), file.length());
+      } else {
+        response = initResponse(task);
+        if (response.response != null) {
+          long bytesRead = response.bytesRead;
+          if (bytesRead == 0) {
+            mStorage.update(task.getId(), response.contentLength, response.md5);
+          }
+          mBus.downloading(task.getId(), bytesRead);
 
-        input = response.response.body().byteStream();
-        output = new FileOutputStream(response.file, bytesRead != 0);
-        byte data[] = new byte[getConfig().bufferSize];
-        int count;
-        if (!isCanceled(task.getId())) {
-          while ((count = input.read(data)) != -1) {
-            bytesRead += count;
-            output.write(data, 0, count);
-            mBus.downloading(task.getId(), bytesRead);
-            if (isCanceled(task.getId())) {
-              break;
+          input = response.response.body().byteStream();
+          output = new FileOutputStream(response.file, bytesRead != 0);
+          byte data[] = new byte[getConfig().bufferSize];
+          int count;
+          if (!isCanceled(task.getId())) {
+            while ((count = input.read(data)) != -1) {
+              bytesRead += count;
+              output.write(data, 0, count);
+              mBus.downloading(task.getId(), bytesRead);
+              if (isCanceled(task.getId())) {
+                break;
+              }
             }
           }
         }
@@ -119,8 +136,8 @@ public class Downloader {
         mStorage.update(task.getId(), Uri.fromFile(renamedOutputFile));
         // get latest task info and call interceptors
         task = mStorage.find(task.getId());
-        for (Interceptor interceptor : DownloadManager.getInstance().getConfig().interceptors) {
-          interceptor.onDownloadSuccess(Info.create(task, task.getContentLength(), Info.Status.DOWNLOADED));
+        for (Interceptor interceptor : getInterceptors()) {
+          interceptor.onDownloaded(Info.create(task, task.getContentLength(), Info.Status.DOWNLOADED));
         }
         // on download success
         mStorage.update(task.getId(), Task.State.SUCCESS);
@@ -134,6 +151,10 @@ public class Downloader {
     } else {
       mBus.pausing(task.getId());
     }
+  }
+
+  private List<Interceptor> getInterceptors() {
+    return DownloadManager.getInstance().getConfig().interceptors;
   }
 
   private ResponseInfo initResponse(Task task) throws IOException {

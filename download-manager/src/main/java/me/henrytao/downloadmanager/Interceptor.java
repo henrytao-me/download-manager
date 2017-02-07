@@ -16,11 +16,15 @@
 
 package me.henrytao.downloadmanager;
 
+import java.io.File;
+
 /**
  * Created by henrytao on 2/3/17.
  */
 
 public interface Interceptor {
 
-  void onDownloadSuccess(Info info);
+  void onDownloaded(Info info);
+
+  File onQueueing(Info info);
 }
