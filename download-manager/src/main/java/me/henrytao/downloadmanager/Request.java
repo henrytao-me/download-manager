@@ -27,7 +27,7 @@ import me.henrytao.downloadmanager.internal.Precondition;
  * Created by henrytao on 12/12/16.
  */
 
-public final class Request {
+public class Request {
 
   private static final int DEFAULT_RETRY = 30;
 
@@ -216,8 +216,9 @@ public final class Request {
       return this;
     }
 
-    public void setTag(String tag) {
+    public Builder setTag(String tag) {
       mTag = tag;
+      return this;
     }
 
     public Builder setTempFilename(String tempFilename) {

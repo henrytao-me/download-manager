@@ -22,6 +22,8 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import me.henrytao.downloadmanager.internal.Bus;
 import me.henrytao.downloadmanager.internal.Downloader;
@@ -35,7 +37,7 @@ import rx.Observable;
  * Created by henrytao on 12/12/16.
  */
 
-public final class DownloadManager {
+public class DownloadManager {
 
   private static final long DEFAULT_BACKOFF_IN_MILLISECONDS = 2000;
 
@@ -123,6 +125,20 @@ public final class DownloadManager {
     return mLogger;
   }
 
+  public Observable<Boolean> isEnqueued(String tag) {
+    return Observable.fromCallable(() -> mStorage.find(tag) != null);
+  }
+
+  public Observable<Info> observe(String tag) {
+    return Observable.fromCallable(() -> mStorage.find(tag))
+        .flatMap(task -> {
+          if (task == null) {
+            return Observable.error(new NullPointerException("Task with tag %s not found"));
+          }
+          return observe(task.getId());
+        });
+  }
+
   public Observable<Info> observe(long id) {
     return mBus.observe(id);
   }
@@ -133,11 +149,25 @@ public final class DownloadManager {
     mBus.pausing(id);
   }
 
+  public void pause(String tag) {
+    List<Task> tasks = mStorage.findAll(tag);
+    for (Task task : tasks) {
+      pause(task.getId());
+    }
+  }
+
   public void resume(long id) {
     mJobService.stop(id);
     mStorage.update(id, Task.State.ACTIVE);
     mJobService.enqueue(id);
     mBus.queueing(id);
+  }
+
+  public void resume(String tag) {
+    Task task = mStorage.find(tag);
+    if (task != null) {
+      resume(task.getId());
+    }
   }
 
   public static class Config {
@@ -152,19 +182,25 @@ public final class DownloadManager {
 
     public final long executionWindowStartInMilliseconds;
 
+    @NonNull
+    public final List<Interceptor> interceptors;
+
     public final boolean persisted;
 
     private Config(long executionWindowStartInMilliseconds, long executionWindowEndInMilliseconds, long backoffInMilliseconds,
-        JobRequest.BackoffPolicy backoffPolicy, boolean persisted, int bufferSize) {
+        JobRequest.BackoffPolicy backoffPolicy, boolean persisted, int bufferSize, @NonNull List<Interceptor> interceptors) {
       this.executionWindowStartInMilliseconds = executionWindowStartInMilliseconds;
       this.executionWindowEndInMilliseconds = executionWindowEndInMilliseconds;
       this.backoffInMilliseconds = backoffInMilliseconds;
       this.backoffPolicy = backoffPolicy;
       this.persisted = persisted;
       this.bufferSize = bufferSize;
+      this.interceptors = interceptors;
     }
 
     public static class Builder {
+
+      private final List<Interceptor> mInterceptors;
 
       private long mBackoffInMilliseconds;
 
@@ -185,11 +221,17 @@ public final class DownloadManager {
         mBackoffPolicy = DEFAULT_BACKOFF_POLICY;
         mPersisted = DEFAULT_PERSISTED;
         mBufferSize = DEFAULT_BUFFER_SIZE;
+        mInterceptors = new ArrayList<>();
+      }
+
+      public Builder addInterceptor(Interceptor interceptor) {
+        mInterceptors.add(interceptor);
+        return this;
       }
 
       public Config build() {
         return new Config(mExecutionWindowStartInMilliseconds, mExecutionWindowEndInMilliseconds, mBackoffInMilliseconds, mBackoffPolicy,
-            mPersisted, mBufferSize);
+            mPersisted, mBufferSize, mInterceptors);
       }
 
       public Builder setBackoffInMilliseconds(long backoffInMilliseconds) {
